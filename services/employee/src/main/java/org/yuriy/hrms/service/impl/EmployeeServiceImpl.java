@@ -1,13 +1,14 @@
 package org.yuriy.hrms.service.impl;
 
-import jakarta.persistence.EntityNotFoundException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.yuriy.hrms.dto.mapper.EmployeeMapper;
 import org.yuriy.hrms.dto.request.EmployeeCreateRequest;
 import org.yuriy.hrms.dto.request.EmployeePatchRequest;
+import org.yuriy.hrms.dto.response.EmployeeResponse;
 import org.yuriy.hrms.entity.Employee;
+import org.yuriy.hrms.entity.Employee.Status;
+import org.yuriy.hrms.exception.ResourceNotFoundException;
 import org.yuriy.hrms.repository.EmployeeRepository;
 import org.yuriy.hrms.service.EmployeeService;
 
@@ -17,80 +18,81 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class EmployeeServiceImpl implements EmployeeService {
 
-    private final EmployeeRepository repo;
-    private final EmployeeMapper mapper;
+    private final EmployeeRepository employeeRepository;
+    private final EmployeeMapper employeeMapper;
 
-    @Autowired
-    public EmployeeServiceImpl(EmployeeRepository repo, EmployeeMapper mapper) {
-        this.repo = repo;
-        this.mapper = mapper;
+    public EmployeeServiceImpl(EmployeeRepository employeeRepository, EmployeeMapper employeeMapper) {
+        this.employeeRepository = employeeRepository;
+        this.employeeMapper = employeeMapper;
     }
 
     @Override
-    public List<Employee> getEmployeesByOrgAndStatus(Long orgId, Employee.Status status) {
-        var effective = (status == null) ? Employee.Status.ACTIVE : status;
-        return repo.findByOrgIdAndStatus(orgId, effective);
+    public List<EmployeeResponse> getAllEmployees() {
+        return employeeRepository.findAll().stream()
+                .map(employeeMapper::toResponse)
+                .toList();
     }
 
     @Override
-    public Employee getEmployeeById(Long id) {
-        return repo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Employee not found"));
+    public EmployeeResponse getEmployeeById(Long id) {
+        return employeeRepository.findById(id)
+                .map(employeeMapper::toResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id " + id));
     }
 
     @Override
     @Transactional
-    public Employee createNewEmployee(EmployeeCreateRequest req) {
-        if (repo.existsByEmailAndOrgId(req.email(), req.orgId())) {
+    public EmployeeResponse createNewEmployee(EmployeeCreateRequest req) {
+        if (employeeRepository.existsByEmailAndOrgId(req.email(), req.orgId())) {
             throw new IllegalArgumentException("Email already exists in this org");
         }
-        var e = mapper.toEntity(req);
+        var e = employeeMapper.toEntity(req);
         validateEmployment(e);
-        return repo.save(e);
+        return employeeMapper.toResponse(employeeRepository.save(e));
     }
 
     @Override
     @Transactional
-    public Employee updateEmployee(Long id, EmployeeCreateRequest req) {
-        var e = getEmployeeById(id);
-
-        var newEmail = req.email();
-        var newOrgId = req.orgId();
-        if (newEmail != null && newOrgId != null &&
-                repo.existsByEmailAndOrgIdAndIdNot(newEmail, newOrgId, id)) {
-            throw new IllegalArgumentException("Email already exists in this org");
-        }
-
-        mapper.applyPut(e, req);
-        validateEmployment(e);
-        return e;
-    }
-
-    @Override
-    @Transactional
-    public Employee patch(Long id, EmployeePatchRequest req) {
-        var e = getEmployeeById(id);
+    public EmployeeResponse updateEmployee(Long id, EmployeeCreateRequest req) {
+        var e = employeeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id " + id));
 
         if (req.email() != null &&
-                repo.existsByEmailAndOrgIdAndIdNot(req.email(), e.getOrgId(), id)) {
+                employeeRepository.existsByEmailAndOrgIdAndIdNot(req.email(), req.orgId(), id)) {
             throw new IllegalArgumentException("Email already exists in this org");
         }
 
-        mapper.applyPatch(e, req);
+        employeeMapper.applyPut(e, req);
         validateEmployment(e);
-        return e;
+        return employeeMapper.toResponse(employeeRepository.save(e));
+    }
+
+    @Override
+    @Transactional
+    public EmployeeResponse patch(Long id, EmployeePatchRequest req) {
+        var e = employeeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id " + id));
+
+        if (req.email() != null &&
+                employeeRepository.existsByEmailAndOrgIdAndIdNot(req.email(), e.getOrgId(), id)) {
+            throw new IllegalArgumentException("Email already exists in this org");
+        }
+
+        employeeMapper.applyPatch(e, req);
+        validateEmployment(e);
+        return employeeMapper.toResponse(employeeRepository.save(e));
     }
 
     @Override
     @Transactional
     public void deleteEmployee(Long id) {
-        if (!repo.existsById(id))
-            throw new EntityNotFoundException("Employee not found");
-        repo.deleteById(id);
+        if (!employeeRepository.existsById(id))
+            throw new ResourceNotFoundException("Employee not found with id " + id);
+        employeeRepository.deleteById(id);
     }
 
     private void validateEmployment(Employee e) {
-        if (e.getStatus() == Employee.Status.TERMINATED && e.getTerminatedAt() == null) {
+        if (e.getStatus() == Status.TERMINATED && e.getTerminatedAt() == null) {
             throw new IllegalStateException("terminatedAt is required for TERMINATED status");
         }
         if (e.getHiredAt() != null && e.getTerminatedAt() != null &&

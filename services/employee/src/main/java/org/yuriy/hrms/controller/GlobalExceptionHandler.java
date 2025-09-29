@@ -1,83 +1,44 @@
 package org.yuriy.hrms.controller;
 
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.ConstraintViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.yuriy.hrms.exception.ResourceNotFoundException;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
-@RestControllerAdvice
+@ControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<?> handleValidation(MethodArgumentNotValidException ex,
-            HttpServletRequest req) {
-        var errors = ex.getBindingResult().getFieldErrors().stream()
-                .map(fe -> Map.of("field", fe.getField(),
-                        "message", Optional.ofNullable(fe.getDefaultMessage()).orElse("Invalid")))
-                .toList();
-
-        return ResponseEntity.badRequest().body(Map.of(
-                "error", "VALIDATION_ERROR",
-                "message", "Validation failed",
-                "errors", errors,
-                "timestamp", OffsetDateTime.now().toString(),
-                "path", req.getRequestURI()
-        ));
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleResourceNotFound(ResourceNotFoundException ex) {
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<?> handleConstraint(ConstraintViolationException ex,
-            HttpServletRequest req) {
-        var errors = ex.getConstraintViolations().stream()
-                .map(v -> Map.of("field", v.getPropertyPath().toString(),
-                        "message", v.getMessage()))
-                .toList();
-
-        return ResponseEntity.badRequest().body(Map.of(
-                "error", "VALIDATION_ERROR",
-                "message", "Constraint violation",
-                "errors", errors,
-                "timestamp", OffsetDateTime.now().toString(),
-                "path", req.getRequestURI()
-        ));
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<?> handleNotFound(EntityNotFoundException ex,
-            HttpServletRequest req) {
-        return ResponseEntity.status(404).body(Map.of(
-                "error", "NOT_FOUND",
-                "message", ex.getMessage(),
-                "timestamp", OffsetDateTime.now().toString(),
-                "path", req.getRequestURI()
-        ));
-    }
-
-    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
-    public ResponseEntity<?> handleBadRequest(RuntimeException ex,
-            HttpServletRequest req) {
-        return ResponseEntity.badRequest().body(Map.of(
-                "error", "BAD_REQUEST",
-                "message", ex.getMessage(),
-                "timestamp", OffsetDateTime.now().toString(),
-                "path", req.getRequestURI()
-        ));
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleOther(Exception ex, HttpServletRequest req) {
-        return ResponseEntity.status(500).body(Map.of(
-                "error", "INTERNAL_ERROR",
-                "message", "Unexpected error",
-                "timestamp", OffsetDateTime.now().toString(),
-                "path", req.getRequestURI()
-        ));
+    public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error: " + ex.getMessage());
+    }
+
+    private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("timestamp", LocalDateTime.now());
+        error.put("status", status.value());
+        error.put("error", status.getReasonPhrase());
+        error.put("message", message);
+        return new ResponseEntity<>(error, status);
     }
 }
