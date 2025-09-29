@@ -1,7 +1,10 @@
 package org.yuriy.hrms.entity;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.Period;
@@ -70,23 +73,28 @@ public class Employee {
 
     private String avatarUrl;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "languages_json", columnDefinition = "jsonb")
-    private String languagesJson;
+    private JsonNode languagesJson;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "address_json", columnDefinition = "jsonb")
-    private String addressJson;
+    private JsonNode addressJson;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "education_json", columnDefinition = "jsonb")
-    private String educationJson;
+    private JsonNode educationJson;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "work_experience_json", columnDefinition = "jsonb")
-    private String workExperienceJson;
+    private JsonNode workExperienceJson;
 
     @Column(name = "cv_key")
     private String cvKey;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "profile_json", columnDefinition = "jsonb")
-    private String profileJson;
+    private JsonNode profileJson;
 
     @Transient
     public Integer getAge() {
