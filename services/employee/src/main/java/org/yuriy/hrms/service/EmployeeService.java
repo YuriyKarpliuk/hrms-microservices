@@ -2,20 +2,21 @@ package org.yuriy.hrms.service;
 
 import org.yuriy.hrms.dto.request.EmployeeCreateRequest;
 import org.yuriy.hrms.dto.request.EmployeePatchRequest;
-import org.yuriy.hrms.entity.Employee;
+import org.yuriy.hrms.dto.response.EmployeeResponse;
 
 import java.util.List;
 
 public interface EmployeeService {
-    List<Employee> getEmployeesByOrgAndStatus(Long orgId, Employee.Status status);
 
-    Employee getEmployeeById(Long id);
+    List<EmployeeResponse> getAllEmployees();
 
-    Employee createNewEmployee(EmployeeCreateRequest req);
+    EmployeeResponse getEmployeeById(Long id);
 
-    Employee updateEmployee(Long id, EmployeeCreateRequest req);
+    EmployeeResponse createNewEmployee(EmployeeCreateRequest req);
 
-    Employee patch(Long id, EmployeePatchRequest req);
+    EmployeeResponse updateEmployee(Long id, EmployeeCreateRequest req);
+
+    EmployeeResponse patch(Long id, EmployeePatchRequest req);
 
     void deleteEmployee(Long id);
 }
