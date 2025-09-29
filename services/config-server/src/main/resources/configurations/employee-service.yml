@@ -9,8 +9,8 @@ spring:
       ddl-auto: validate
     database: postgresql
     database-platform: org.hibernate.dialect.PostgreSQLDialect
-#  flyway:
-#    enabled: true
+  flyway:
+    enabled: false
 #    baseline-description: "init"
 #    user: ${spring.datasource.username}
 #    password: ${spring.datasource.password}
