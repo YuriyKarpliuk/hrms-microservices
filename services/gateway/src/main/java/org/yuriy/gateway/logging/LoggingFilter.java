@@ -16,13 +16,15 @@ public class LoggingFilter implements GlobalFilter {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         long start = System.currentTimeMillis();
         return chain.filter(exchange)
-                .doOnSuccess(aVoid -> {
+                .doFinally(signalType -> {
                     long duration = System.currentTimeMillis() - start;
-                    log.info("Request: {} {} -> status {} ({} ms)",
+
+                    log.info("Request: {} {} -> status {} ({} ms) [signal: {}]",
                             exchange.getRequest().getMethod(),
                             exchange.getRequest().getURI(),
                             exchange.getResponse().getStatusCode(),
-                            duration);
+                            duration,
+                            signalType.name());
                 });
     }
 }
