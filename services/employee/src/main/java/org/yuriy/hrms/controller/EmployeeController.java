@@ -1,6 +1,9 @@
 package org.yuriy.hrms.controller;
 
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -8,6 +11,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.yuriy.hrms.dto.request.EmployeeCreateRequest;
 import org.yuriy.hrms.dto.request.EmployeePatchRequest;
+import org.yuriy.hrms.dto.request.EmployeeSearchRequest;
 import org.yuriy.hrms.dto.response.EmployeeResponse;
 import org.yuriy.hrms.service.EmployeeService;
 
@@ -60,4 +64,13 @@ public class EmployeeController {
         employeeService.deleteEmployee(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'ADMIN', 'EMPLOYEE')")
+    public ResponseEntity<Page<EmployeeResponse>> searchEmployees(
+            @RequestBody EmployeeSearchRequest request,
+            @PageableDefault(sort = "email") Pageable pageable) {
+        return ResponseEntity.ok(employeeService.searchEmployees(request, pageable));
+    }
+
 }

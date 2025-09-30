@@ -1,19 +1,26 @@
 package org.yuriy.hrms.service.impl;
 
 import io.micrometer.common.util.StringUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.yuriy.hrms.dto.mapper.EmployeeMapper;
 import org.yuriy.hrms.dto.request.EmployeeCreateRequest;
 import org.yuriy.hrms.dto.request.EmployeePatchRequest;
+import org.yuriy.hrms.dto.request.EmployeeSearchRequest;
 import org.yuriy.hrms.dto.response.EmployeeResponse;
 import org.yuriy.hrms.entity.Employee;
 import org.yuriy.hrms.entity.Employee.Status;
 import org.yuriy.hrms.exception.ResourceNotFoundException;
 import org.yuriy.hrms.repository.EmployeeRepository;
+import org.yuriy.hrms.repository.specification.EmployeeSpecification;
+import org.yuriy.hrms.repository.specification.EmployeeSpecification.StringMatchType;
 import org.yuriy.hrms.service.EmployeeService;
 import org.yuriy.hrms.service.KeycloakUserService;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -29,6 +36,64 @@ public class EmployeeServiceImpl implements EmployeeService {
         this.employeeRepository = employeeRepository;
         this.employeeMapper = employeeMapper;
         this.keycloakUserService = keycloakUserService;
+    }
+
+    @Override
+    public Page<EmployeeResponse> searchEmployees(EmployeeSearchRequest request, Pageable pageable) {
+        List<Specification<Employee>> specifications = new ArrayList<>();
+
+        if (request.firstName() != null) {
+            specifications.add(EmployeeSpecification.firstNameMatches(
+                    request.firstName(), request.firstNameMatchType()
+            ));
+        }
+        if (request.lastName() != null) {
+            specifications.add(EmployeeSpecification.lastNameMatches(
+                    request.lastName(), request.lastNameMatchType()
+            ));
+        }
+        if (request.email() != null) {
+            specifications.add(EmployeeSpecification.emailMatches(
+                    request.email(), request.emailMatchType()
+            ));
+        }
+        if (request.status() != null) {
+            specifications.add(EmployeeSpecification.hasStatus(request.status()));
+        }
+        if (request.gender() != null) {
+            specifications.add(EmployeeSpecification.hasGender(request.gender()));
+        }
+        if (request.maritalStatus() != null) {
+            specifications.add(EmployeeSpecification.hasMaritalStatus(request.maritalStatus()));
+        }
+        if (request.hiredFrom() != null || request.hiredTo() != null) {
+            specifications.add(EmployeeSpecification.hiredBetween(request.hiredFrom(), request.hiredTo()));
+        }
+        if (request.birthFrom() != null || request.birthTo() != null) {
+            specifications.add(EmployeeSpecification.hasBirthdayBetween(request.birthFrom(), request.birthTo()));
+        }
+        if (request.officeLocation() != null) {
+            specifications.add(EmployeeSpecification.hasOfficeLocation(request.officeLocation()));
+        }
+        if (request.deptId() != null) {
+            specifications.add(EmployeeSpecification.inDepartment(request.deptId()));
+        }
+
+        if (request.managerId() != null) {
+            specifications.add(EmployeeSpecification.hasManager(request.managerId()));
+        }
+
+        if (request.hrId() != null) {
+            specifications.add(EmployeeSpecification.hasHR(request.hrId()));
+        }
+
+        if (request.phone() != null) {
+            specifications.add(EmployeeSpecification.hasPhone(request.phone()));
+        }
+        Specification<Employee> specification = Specification.allOf(specifications);
+
+        return employeeRepository.findAll(specification, pageable)
+                .map(employeeMapper::toResponse);
     }
 
     @Override
