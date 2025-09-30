@@ -9,7 +9,7 @@ import org.yuriy.hrms.entity.Employee;
 @Component
 public class EmployeeMapper {
     public Employee toEntity(EmployeeCreateRequest r) {
-        return Employee.builder().orgId(r.orgId()).userId(r.userId()).deptId(r.deptId()).positionId(r.positionId())
+        return Employee.builder().orgId(r.orgId()).deptId(r.deptId()).positionId(r.positionId())
                 .managerId(r.managerId()).hrId(r.hrId()).email(r.email()).firstName(r.firstName())
                 .lastName(r.lastName()).phone(r.phone()).status(r.status()).gender(r.gender())
                 .maritalStatus(r.maritalStatus()).taxNumber(r.taxNumber()).about(r.about())
@@ -57,7 +57,6 @@ public class EmployeeMapper {
 
     public void applyPut(Employee e, EmployeeCreateRequest r) {
         e.setOrgId(r.orgId());
-        e.setUserId(r.userId());
         e.setDeptId(r.deptId());
         e.setPositionId(r.positionId());
         e.setManagerId(r.managerId());

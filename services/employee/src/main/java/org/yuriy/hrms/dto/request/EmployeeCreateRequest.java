@@ -9,12 +9,12 @@ import org.yuriy.hrms.entity.Employee.Gender;
 import java.time.LocalDate;
 
 public record EmployeeCreateRequest(@NotNull Long orgId,
-        @NotBlank String userId,
         Long deptId,
         Long positionId,
         Long managerId,
         Long hrId,
 
+        String role,
         @Email @NotBlank String email,
         @NotBlank String firstName,
         @NotBlank String lastName,

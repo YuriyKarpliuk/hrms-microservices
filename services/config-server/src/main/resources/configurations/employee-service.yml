@@ -14,5 +14,15 @@ spring:
 #    baseline-description: "init"
 #    user: ${spring.datasource.username}
 #    password: ${spring.datasource.password}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: "http://localhost:9098/realms/HRMS"
 server:
   port: ${EMPLOYEE_PORT:8050}
+keycloak:
+  auth-server-url: http://localhost:9098
+  realm: HRMS
+  client-id: hrms-rest-api
+  client-secret: ${KEYCLOAK_CLIENT_SECRET}

@@ -1,0 +1,28 @@
+server:
+  port: 8222
+
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: true
+
+          routes:
+            - id: employee-service
+              uri: lb://EMPLOYEE-SERVICE
+              predicates:
+                - Path=/api/v1/employees/**
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: "http://localhost:9098/realms/HRMS"
+
+keycloak:
+  auth-server-url: http://localhost:9098
+  realm: HRMS
+  client-id: hrms-rest-api
+  client-secret: ${KEYCLOAK_CLIENT_SECRET}
