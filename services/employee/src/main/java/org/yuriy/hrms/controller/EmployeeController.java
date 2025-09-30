@@ -48,7 +48,7 @@ public class EmployeeController {
     }
 
     @PatchMapping("/{id}")
-    @PreAuthorize("hasAnyRole('HR', 'ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE', 'ADMIN')")
     public ResponseEntity<EmployeeResponse> employeePartialUpdate(@PathVariable Long id,
             @Valid @RequestBody EmployeePatchRequest req) {
         return ResponseEntity.ok(employeeService.patch(id, req));
