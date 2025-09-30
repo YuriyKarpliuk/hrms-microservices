@@ -25,7 +25,7 @@ public class Employee {
     @Column(nullable = false)
     private Long orgId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String userId;
 
     private Long deptId;

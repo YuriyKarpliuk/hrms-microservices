@@ -1,5 +1,6 @@
 package org.yuriy.hrms.service.impl;
 
+import io.micrometer.common.util.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.yuriy.hrms.dto.mapper.EmployeeMapper;
@@ -11,6 +12,7 @@ import org.yuriy.hrms.entity.Employee.Status;
 import org.yuriy.hrms.exception.ResourceNotFoundException;
 import org.yuriy.hrms.repository.EmployeeRepository;
 import org.yuriy.hrms.service.EmployeeService;
+import org.yuriy.hrms.service.KeycloakUserService;
 
 import java.util.List;
 
@@ -20,10 +22,13 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final EmployeeMapper employeeMapper;
+    private final KeycloakUserService keycloakUserService;
 
-    public EmployeeServiceImpl(EmployeeRepository employeeRepository, EmployeeMapper employeeMapper) {
+    public EmployeeServiceImpl(EmployeeRepository employeeRepository, EmployeeMapper employeeMapper,
+            KeycloakUserService keycloakUserService) {
         this.employeeRepository = employeeRepository;
         this.employeeMapper = employeeMapper;
+        this.keycloakUserService = keycloakUserService;
     }
 
     @Override
@@ -46,7 +51,11 @@ public class EmployeeServiceImpl implements EmployeeService {
         if (employeeRepository.existsByEmailAndOrgId(req.email(), req.orgId())) {
             throw new IllegalArgumentException("Email already exists in this org");
         }
+        String role = StringUtils.isBlank(req.role()) ? "EMPLOYEE" : req.role();
+        String keyCloakUserId =
+                keycloakUserService.createUser(req.email(), req.firstName(), req.lastName(), role);
         var e = employeeMapper.toEntity(req);
+        e.setUserId(keyCloakUserId);
         validateEmployment(e);
         return employeeMapper.toResponse(employeeRepository.save(e));
     }
@@ -64,6 +73,10 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         employeeMapper.applyPut(e, req);
         validateEmployment(e);
+        if (e.getUserId() != null) {
+            keycloakUserService.updateUser(e.getUserId(), e.getEmail(), e.getEmail(), e.getFirstName(),
+                    e.getLastName());
+        }
         return employeeMapper.toResponse(employeeRepository.save(e));
     }
 
@@ -80,14 +93,22 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         employeeMapper.applyPatch(e, req);
         validateEmployment(e);
+        if (e.getUserId() != null) {
+            keycloakUserService.updateUser(e.getUserId(), e.getEmail(), e.getEmail(), e.getFirstName(),
+                    e.getLastName());
+        }
         return employeeMapper.toResponse(employeeRepository.save(e));
     }
 
     @Override
     @Transactional
     public void deleteEmployee(Long id) {
-        if (!employeeRepository.existsById(id))
-            throw new ResourceNotFoundException("Employee not found with id " + id);
+        Employee employee = employeeRepository.findById(id).orElseThrow(() ->
+                new ResourceNotFoundException("Employee not found with id " + id));
+        String userId = employee.getUserId();
+        if (userId != null) {
+            keycloakUserService.deleteUser(userId);
+        }
         employeeRepository.deleteById(id);
     }
 

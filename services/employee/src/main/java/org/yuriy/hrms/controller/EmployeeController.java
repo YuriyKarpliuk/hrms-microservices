@@ -3,6 +3,7 @@ package org.yuriy.hrms.controller;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.yuriy.hrms.dto.request.EmployeeCreateRequest;
@@ -34,23 +35,27 @@ public class EmployeeController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('HR', 'ADMIN')")
     public ResponseEntity<EmployeeResponse> createNewEmployee(@Valid @RequestBody EmployeeCreateRequest req) {
         return new ResponseEntity<>(employeeService.createNewEmployee(req), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('HR', 'ADMIN')")
     public ResponseEntity<EmployeeResponse> employeeFullUpdate(@PathVariable Long id,
             @Valid @RequestBody EmployeeCreateRequest req) {
         return ResponseEntity.ok(employeeService.updateEmployee(id, req));
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('HR', 'ADMIN', 'EMPLOYEE')")
     public ResponseEntity<EmployeeResponse> employeePartialUpdate(@PathVariable Long id,
             @Valid @RequestBody EmployeePatchRequest req) {
         return ResponseEntity.ok(employeeService.patch(id, req));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('HR', 'ADMIN')")
     public ResponseEntity<Void> deleteEmployee(@PathVariable Long id) {
         employeeService.deleteEmployee(id);
         return ResponseEntity.noContent().build();
