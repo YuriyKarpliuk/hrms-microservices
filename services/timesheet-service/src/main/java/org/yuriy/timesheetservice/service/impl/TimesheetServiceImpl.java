@@ -10,6 +10,7 @@ import org.yuriy.timesheetservice.dto.request.TimesheetCreateRequest;
 import org.yuriy.timesheetservice.dto.request.TimesheetSearchRequest;
 import org.yuriy.timesheetservice.dto.response.TimesheetResponse;
 import org.yuriy.timesheetservice.entity.Timesheet;
+import org.yuriy.timesheetservice.entity.TimesheetStatus;
 import org.yuriy.timesheetservice.repository.TimesheetRepository;
 import org.yuriy.timesheetservice.repository.specification.TimesheetSpecification;
 import org.yuriy.timesheetservice.service.TimesheetService;
@@ -73,4 +74,23 @@ public class TimesheetServiceImpl implements TimesheetService {
         return timesheetRepository.findAll(specification, pageable)
                 .map(timesheetMapper::toResponse);
     }
+
+    @Transactional
+    @Override
+    public TimesheetResponse approveTimesheet(Long id) {
+        Timesheet ts = timesheetRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Timesheet not found with id " + id));
+        ts.setStatus(TimesheetStatus.APPROVED);
+        return timesheetMapper.toResponse(timesheetRepository.save(ts));
+    }
+
+    @Transactional
+    @Override
+    public TimesheetResponse rejectTimesheet(Long id) {
+        Timesheet ts = timesheetRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Timesheet not found with id " + id));
+        ts.setStatus(TimesheetStatus.REJECTED);
+        return timesheetMapper.toResponse(timesheetRepository.save(ts));
+    }
+
 }

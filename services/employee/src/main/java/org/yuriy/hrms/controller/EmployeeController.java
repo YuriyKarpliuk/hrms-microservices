@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.yuriy.hrms.dto.request.EmployeeCreateRequest;
 import org.yuriy.hrms.dto.request.EmployeePatchRequest;
 import org.yuriy.hrms.dto.request.EmployeeSearchRequest;
+import org.yuriy.hrms.dto.response.EmployeeBasicResponse;
 import org.yuriy.hrms.dto.response.EmployeeResponse;
 import org.yuriy.hrms.service.EmployeeService;
 
@@ -69,6 +70,16 @@ public class EmployeeController {
             @RequestBody EmployeeSearchRequest request,
             @PageableDefault(sort = "email") Pageable pageable) {
         return ResponseEntity.ok(employeeService.searchEmployees(request, pageable));
+    }
+
+    @GetMapping("/{id}/exists")
+    public ResponseEntity<Boolean> existsById(@PathVariable Long id) {
+        return ResponseEntity.ok(employeeService.existsById(id));
+    }
+
+    @GetMapping("/{id}/basic")
+    public ResponseEntity<EmployeeBasicResponse> getEmployeeBasicInfo(@PathVariable Long id) {
+        return ResponseEntity.ok(employeeService.getBasicInfo(id));
     }
 
 }

@@ -9,11 +9,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.yuriy.payrollservice.dto.mapper.PayrollMapper;
 import org.yuriy.payrollservice.dto.request.PayrollCreateRequest;
 import org.yuriy.payrollservice.dto.request.PayrollSearchRequest;
+import org.yuriy.payrollservice.dto.response.EmployeeBasicResponse;
 import org.yuriy.payrollservice.dto.response.PayrollResponse;
+import org.yuriy.payrollservice.dto.response.PayrollWithEmployeeResponse;
 import org.yuriy.payrollservice.entity.Payroll;
 import org.yuriy.payrollservice.entity.PayrollStatus;
 import org.yuriy.payrollservice.repository.PayrollRepository;
 import org.yuriy.payrollservice.repository.specification.PayrollSpecification;
+import org.yuriy.payrollservice.service.EmployeeClient;
 import org.yuriy.payrollservice.service.PayrollService;
 
 import java.util.ArrayList;
@@ -28,16 +31,28 @@ public class PayrollServiceImpl implements PayrollService {
 
     private final PayrollMapper payrollMapper;
 
-    public PayrollServiceImpl(PayrollRepository payrollRepository, PayrollMapper payrollMapper) {
+    private final EmployeeClient employeeClient;
+
+    public PayrollServiceImpl(PayrollRepository payrollRepository, PayrollMapper payrollMapper,
+            EmployeeClient employeeClient) {
         this.payrollRepository = payrollRepository;
         this.payrollMapper = payrollMapper;
+        this.employeeClient = employeeClient;
     }
 
     @Override
     @Transactional
-    public PayrollResponse createPayroll(PayrollCreateRequest r) {
+    public PayrollWithEmployeeResponse createPayroll(PayrollCreateRequest r) {
+
+        if (!employeeClient.existsById(r.employeeId())) {
+            throw new IllegalArgumentException("Employee with id " + r.employeeId() + " not found");
+        }
+
+        EmployeeBasicResponse emp = employeeClient.getBasicInfo(r.employeeId());
+
+
         Payroll payroll = payrollMapper.toEntity(r);
-        return payrollMapper.toResponse(payrollRepository.save(payroll));
+        return payrollMapper.toWithEmployeeResponse(payrollRepository.save(payroll), emp);
     }
 
     @Override
@@ -71,7 +86,7 @@ public class PayrollServiceImpl implements PayrollService {
     }
 
     @Override
-    public Page<PayrollResponse> searchTimesheets(PayrollSearchRequest request, Pageable pageable) {
+    public Page<PayrollResponse> searchPayrolls(PayrollSearchRequest request, Pageable pageable) {
         List<Specification<Payroll>> specifications = new ArrayList<>();
 
         if (request.employeeId() != null) {
@@ -94,4 +109,13 @@ public class PayrollServiceImpl implements PayrollService {
 
         return payrollRepository.findAll(specification, pageable).map(payrollMapper::toResponse);
     }
+
+    @Override
+    public List<PayrollResponse> getPayrollsByEmployee(Long employeeId) {
+        return payrollRepository.findByEmployeeId(employeeId)
+                .stream()
+                .map(payrollMapper::toResponse)
+                .toList();
+    }
+
 }

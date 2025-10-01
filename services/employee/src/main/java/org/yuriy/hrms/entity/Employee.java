@@ -30,7 +30,7 @@ public class Employee {
 
     private Long deptId;
 
-    private Long positionId;
+    private String position;
 
     private Long managerId;
 

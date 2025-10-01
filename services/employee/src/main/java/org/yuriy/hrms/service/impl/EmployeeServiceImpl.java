@@ -1,6 +1,7 @@
 package org.yuriy.hrms.service.impl;
 
 import io.micrometer.common.util.StringUtils;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -10,6 +11,7 @@ import org.yuriy.hrms.dto.mapper.EmployeeMapper;
 import org.yuriy.hrms.dto.request.EmployeeCreateRequest;
 import org.yuriy.hrms.dto.request.EmployeePatchRequest;
 import org.yuriy.hrms.dto.request.EmployeeSearchRequest;
+import org.yuriy.hrms.dto.response.EmployeeBasicResponse;
 import org.yuriy.hrms.dto.response.EmployeeResponse;
 import org.yuriy.hrms.entity.Employee;
 import org.yuriy.hrms.entity.Employee.Status;
@@ -169,11 +171,24 @@ public class EmployeeServiceImpl implements EmployeeService {
     public void deleteEmployee(Long id) {
         Employee employee = employeeRepository.findById(id).orElseThrow(() ->
                 new ResourceNotFoundException("Employee not found with id " + id));
-//        String userId = employee.getUserId();
-//        if (userId != null) {
-//            keycloakUserService.deleteUser(userId);
-//        }
+        String userId = employee.getUserId();
+        if (userId != null) {
+            keycloakUserService.deleteUser(userId);
+        }
         employeeRepository.deleteById(id);
+    }
+
+    @Override
+    public Boolean existsById(Long id) {
+        return employeeRepository.existsById(id);
+    }
+
+    @Override
+    public EmployeeBasicResponse getBasicInfo(Long id) {
+        return employeeRepository.findById(id)
+                .map(emp -> new EmployeeBasicResponse(emp.getId(), emp.getFirstName(), emp.getLastName(),
+                        emp.getEmail(), emp.getPosition()))
+                .orElseThrow(() -> new EntityNotFoundException("Employee not found with id " + id));
     }
 
     private void validateEmployment(Employee e) {

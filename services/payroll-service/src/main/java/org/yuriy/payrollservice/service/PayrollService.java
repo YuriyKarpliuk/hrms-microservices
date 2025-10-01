@@ -6,12 +6,13 @@ import org.springframework.data.domain.Pageable;
 import org.yuriy.payrollservice.dto.request.PayrollCreateRequest;
 import org.yuriy.payrollservice.dto.request.PayrollSearchRequest;
 import org.yuriy.payrollservice.dto.response.PayrollResponse;
+import org.yuriy.payrollservice.dto.response.PayrollWithEmployeeResponse;
 
 import java.util.List;
 
 public interface PayrollService {
 
-    PayrollResponse createPayroll(PayrollCreateRequest r);
+    PayrollWithEmployeeResponse createPayroll(PayrollCreateRequest r);
 
     List<PayrollResponse> getAllPayrolls();
 
@@ -21,5 +22,7 @@ public interface PayrollService {
 
     PayrollResponse markAsFailed(Long id);
 
-    Page<PayrollResponse> searchTimesheets(PayrollSearchRequest request, Pageable pageable);
+    Page<PayrollResponse> searchPayrolls(PayrollSearchRequest request, Pageable pageable);
+
+    List<PayrollResponse> getPayrollsByEmployee(Long employeeId);
 }
