@@ -23,6 +23,10 @@ spring:
               uri: lb://ORGANIZATION-SERVICE
               predicates:
                 - Path=/api/v1/organizations/**
+            - id: leave-service
+              uri: lb://LEAVE-SERVICE
+              predicates:
+                - Path=/api/v1/leaves/**
   security:
     oauth2:
       resourceserver:

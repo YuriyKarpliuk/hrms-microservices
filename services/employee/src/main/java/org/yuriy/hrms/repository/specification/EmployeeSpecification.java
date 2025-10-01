@@ -53,18 +53,18 @@ public class EmployeeSpecification {
 
     public static Specification<Employee> hasStatus(Status status) {
         return (root, query, cb) ->
-                status == null ? null : cb.equal(root.get("status"), status);
+                status == null ? cb.conjunction() : cb.equal(root.get("status"), status);
     }
 
 
     public static Specification<Employee> hasGender(Gender gender) {
         return (root, query, cb) ->
-                gender == null ? null : cb.equal(root.get("gender"), gender);
+                gender == null ? cb.conjunction() : cb.equal(root.get("gender"), gender);
     }
 
     public static Specification<Employee> hasMaritalStatus(MaritalStatus maritalStatus) {
         return (root, query, cb) ->
-                maritalStatus == null ? null : cb.equal(root.get("maritalStatus"), maritalStatus);
+                maritalStatus == null ? cb.conjunction() : cb.equal(root.get("maritalStatus"), maritalStatus);
     }
 
     public static Specification<Employee> hiredBetween(LocalDate start, LocalDate end) {
@@ -76,7 +76,7 @@ public class EmployeeSpecification {
             } else if (end != null) {
                 return cb.lessThanOrEqualTo(root.get("hiredAt"), end);
             }
-            return null;
+            return cb.conjunction();
         };
     }
 
@@ -90,7 +90,7 @@ public class EmployeeSpecification {
             } else if (end != null) {
                 return cb.lessThanOrEqualTo(root.get("terminatedAt"), end);
             }
-            return null;
+            return cb.conjunction();
         };
     }
 
@@ -103,32 +103,32 @@ public class EmployeeSpecification {
             } else if (end != null) {
                 return cb.lessThanOrEqualTo(root.get("birthDate"), end);
             }
-            return null;
+            return cb.conjunction();
         };
     }
 
     public static Specification<Employee> hasOfficeLocation(String officeLocation) {
         return (root, query, cb) ->
-                officeLocation == null ? null : cb.equal(root.get("officeLocation"), officeLocation);
+                officeLocation == null ? cb.conjunction() : cb.equal(root.get("officeLocation"), officeLocation);
     }
 
     public static Specification<Employee> inDepartment(Long deptId) {
         return (root, query, cb) ->
-                deptId == null ? null : cb.equal(root.get("deptId"), deptId);
+                deptId == null ? cb.conjunction() : cb.equal(root.get("deptId"), deptId);
     }
 
     public static Specification<Employee> hasManager(Long managerId) {
         return (root, query, cb) ->
-                managerId == null ? null : cb.equal(root.get("managerId"), managerId);
+                managerId == null ? cb.conjunction() : cb.equal(root.get("managerId"), managerId);
     }
 
     public static Specification<Employee> hasHR(Long hrId) {
         return (root, query, cb) ->
-                hrId == null ? null : cb.equal(root.get("hrId"), hrId);
+                hrId == null ? cb.conjunction() : cb.equal(root.get("hrId"), hrId);
     }
 
     public static Specification<Employee> hasPhone(String phone) {
         return (root, query, cb) ->
-                phone == null ? null : cb.equal(root.get("phone"), phone);
+                phone == null ? cb.conjunction() : cb.equal(root.get("phone"), phone);
     }
 }
