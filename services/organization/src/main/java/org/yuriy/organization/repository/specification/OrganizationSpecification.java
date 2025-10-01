@@ -28,12 +28,12 @@ public class OrganizationSpecification {
 
     public static Specification<Organization> hasCurrency(String currency) {
         return (root, query, cb) ->
-                currency == null ? null : cb.equal(root.get("currency"), currency);
+                currency == null ? cb.conjunction() : cb.equal(root.get("currency"), currency);
     }
 
     public static Specification<Organization> hasTaxNumber(String taxNumber) {
         return (root, query, cb) ->
-                taxNumber == null ? null : cb.equal(root.get("taxNumber"), taxNumber);
+                taxNumber == null ? cb.conjunction() : cb.equal(root.get("taxNumber"), taxNumber);
     }
 
     private static Join<Organization, OrganizationAddress> joinAddress(
@@ -46,7 +46,7 @@ public class OrganizationSpecification {
     public static Specification<Organization> hasHouseNumber(String houseNumber) {
         return (root, query, cb) -> {
             if (houseNumber == null)
-                return null;
+                return cb.conjunction();
             assert query != null;
             Join<Organization, OrganizationAddress> join = joinAddress(root, query);
             return cb.equal(join.get("houseNumber"), houseNumber);
@@ -56,7 +56,7 @@ public class OrganizationSpecification {
     public static Specification<Organization> hasStreet(String street) {
         return (root, query, cb) -> {
             if (street == null)
-                return null;
+                return cb.conjunction();
             assert query != null;
             Join<Organization, OrganizationAddress> join = joinAddress(root, query);
             return cb.like(cb.lower(join.get("street")), "%" + street.toLowerCase() + "%");
@@ -66,7 +66,7 @@ public class OrganizationSpecification {
     public static Specification<Organization> hasCity(String city) {
         return (root, query, cb) -> {
             if (city == null)
-                return null;
+                return cb.conjunction();
             assert query != null;
             Join<Organization, OrganizationAddress> join = joinAddress(root, query);
             return cb.equal(join.get("city"), city);
@@ -76,7 +76,7 @@ public class OrganizationSpecification {
     public static Specification<Organization> hasState(String state) {
         return (root, query, cb) -> {
             if (state == null)
-                return null;
+                return cb.conjunction();
             assert query != null;
             Join<Organization, OrganizationAddress> join = joinAddress(root, query);
             return cb.equal(join.get("state"), state);
@@ -86,7 +86,7 @@ public class OrganizationSpecification {
     public static Specification<Organization> hasPostalCode(String postalCode) {
         return (root, query, cb) -> {
             if (postalCode == null)
-                return null;
+                return cb.conjunction();
             assert query != null;
             Join<Organization, OrganizationAddress> join = joinAddress(root, query);
             return cb.equal(join.get("postalCode"), postalCode);
@@ -96,7 +96,7 @@ public class OrganizationSpecification {
     public static Specification<Organization> hasCountry(String country) {
         return (root, query, cb) -> {
             if (country == null)
-                return null;
+                return cb.conjunction();
             assert query != null;
             Join<Organization, OrganizationAddress> join = joinAddress(root, query);
             return cb.equal(join.get("country"), country);

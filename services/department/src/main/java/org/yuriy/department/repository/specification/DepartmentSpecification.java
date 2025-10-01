@@ -23,12 +23,12 @@ public class DepartmentSpecification {
 
     public static Specification<Department> hasManager(Long managerId) {
         return (root, query, cb) ->
-                managerId == null ? null : cb.equal(root.get("managerId"), managerId);
+                managerId == null ? cb.conjunction() : cb.equal(root.get("managerId"), managerId);
     }
 
     public static Specification<Department> inOrganization(Long orgId) {
         return (root, query, cb) ->
-                orgId == null ? null : cb.equal(root.get("orgId"), orgId);
+                orgId == null ? cb.conjunction() : cb.equal(root.get("orgId"), orgId);
     }
 
 }
