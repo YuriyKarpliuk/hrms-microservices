@@ -1,6 +1,6 @@
 services:
   postgresql:
-    image: postgres:15
+    image: postgres
     container_name: ms_pg_sql
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -46,7 +46,7 @@ services:
       - postgresql
     networks:
       - microservices-net
-    command: ["start"]
+    command: ["start-dev"]
     restart: unless-stopped
 
 networks:
