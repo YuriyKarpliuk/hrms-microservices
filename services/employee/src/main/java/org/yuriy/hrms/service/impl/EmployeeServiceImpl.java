@@ -16,7 +16,6 @@ import org.yuriy.hrms.entity.Employee.Status;
 import org.yuriy.hrms.exception.ResourceNotFoundException;
 import org.yuriy.hrms.repository.EmployeeRepository;
 import org.yuriy.hrms.repository.specification.EmployeeSpecification;
-import org.yuriy.hrms.repository.specification.EmployeeSpecification.StringMatchType;
 import org.yuriy.hrms.service.EmployeeService;
 import org.yuriy.hrms.service.KeycloakUserService;
 
@@ -116,7 +115,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         if (employeeRepository.existsByEmailAndOrgId(req.email(), req.orgId())) {
             throw new IllegalArgumentException("Email already exists in this org");
         }
-        String role = StringUtils.isBlank(req.role()) ? "EMPLOYEE" : req.role();
+        String role = StringUtils.isBlank(req.role()) ? "USER" : req.role();
         String keyCloakUserId =
                 keycloakUserService.createUser(req.email(), req.firstName(), req.lastName(), role);
         var e = employeeMapper.toEntity(req);
@@ -170,10 +169,10 @@ public class EmployeeServiceImpl implements EmployeeService {
     public void deleteEmployee(Long id) {
         Employee employee = employeeRepository.findById(id).orElseThrow(() ->
                 new ResourceNotFoundException("Employee not found with id " + id));
-        String userId = employee.getUserId();
-        if (userId != null) {
-            keycloakUserService.deleteUser(userId);
-        }
+//        String userId = employee.getUserId();
+//        if (userId != null) {
+//            keycloakUserService.deleteUser(userId);
+//        }
         employeeRepository.deleteById(id);
     }
 

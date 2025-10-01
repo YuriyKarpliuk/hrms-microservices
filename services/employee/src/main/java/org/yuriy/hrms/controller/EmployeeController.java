@@ -52,7 +52,6 @@ public class EmployeeController {
     }
 
     @PatchMapping("/{id}")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'EMPLOYEE', 'ADMIN')")
     public ResponseEntity<EmployeeResponse> employeePartialUpdate(@PathVariable Long id,
             @Valid @RequestBody EmployeePatchRequest req) {
         return ResponseEntity.ok(employeeService.patch(id, req));
@@ -66,7 +65,6 @@ public class EmployeeController {
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasAnyRole('HR', 'MANAGER', 'ADMIN', 'EMPLOYEE')")
     public ResponseEntity<Page<EmployeeResponse>> searchEmployees(
             @RequestBody EmployeeSearchRequest request,
             @PageableDefault(sort = "email") Pageable pageable) {

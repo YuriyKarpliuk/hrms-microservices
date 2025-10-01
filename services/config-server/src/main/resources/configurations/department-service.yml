@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/employees
+    url: jdbc:postgresql://localhost:5432/departments
     username: ${POSTGRES_USER:keycloak}
     password: ${POSTGRES_PASSWORD:keycloak}
     driver-class-name: org.postgresql.Driver
@@ -20,7 +20,7 @@ spring:
         jwt:
           issuer-uri: "http://localhost:9098/realms/HRMS"
 server:
-  port: ${EMPLOYEE_PORT:8050}
+  port: ${DEPARTMENT_PORT:8051}
 keycloak:
   auth-server-url: http://localhost:9098
   realm: HRMS
