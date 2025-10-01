@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/leaves
+    username: ${POSTGRES_USER:keycloak}
+    password: ${POSTGRES_PASSWORD:keycloak}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: false
+    baseline-description: "init"
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: "http://localhost:9098/realms/HRMS"
+server:
+  port: ${TIMESHEETS_PORT:8055}
+keycloak:
+  auth-server-url: http://localhost:9098
+  realm: HRMS
+  client-id: hrms-rest-api
+  client-secret: ${KEYCLOAK_CLIENT_SECRET}

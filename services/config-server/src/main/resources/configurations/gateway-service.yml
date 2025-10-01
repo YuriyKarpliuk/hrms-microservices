@@ -27,6 +27,14 @@ spring:
               uri: lb://LEAVE-SERVICE
               predicates:
                 - Path=/api/v1/leaves/**
+            - id: timesheet-service
+              uri: lb://TIMESHEET-SERVICE
+              predicates:
+                - Path=/api/v1/timesheets/**
+            - id: payroll-service
+              uri: lb://PAYROLL-SERVICE
+              predicates:
+                - Path=/api/v1/payrolls/**
   security:
     oauth2:
       resourceserver:
