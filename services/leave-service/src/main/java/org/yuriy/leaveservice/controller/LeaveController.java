@@ -25,7 +25,7 @@ public class LeaveController {
     public LeaveController(LeaveService leaveService) {this.leaveService = leaveService;}
 
     @PostMapping
-    public ResponseEntity<LeaveResponse> createLeave(@Validated @RequestBody LeaveCreateRequest req) {
+    public ResponseEntity<LeaveResponse> createLeave(@RequestBody LeaveCreateRequest req) {
         return ResponseEntity.ok(leaveService.createLeave(req));
     }
 

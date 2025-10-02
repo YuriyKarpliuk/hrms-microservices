@@ -13,6 +13,7 @@ import org.yuriy.timesheetservice.entity.Timesheet;
 import org.yuriy.timesheetservice.entity.TimesheetStatus;
 import org.yuriy.timesheetservice.repository.TimesheetRepository;
 import org.yuriy.timesheetservice.repository.specification.TimesheetSpecification;
+import org.yuriy.timesheetservice.service.EmployeeClient;
 import org.yuriy.timesheetservice.service.TimesheetService;
 
 import java.util.ArrayList;
@@ -24,14 +25,20 @@ public class TimesheetServiceImpl implements TimesheetService {
 
     private final TimesheetRepository timesheetRepository;
     private final TimesheetMapper timesheetMapper;
+    private final EmployeeClient employeeClient;
 
-    public TimesheetServiceImpl(TimesheetRepository timesheetRepository, TimesheetMapper timesheetMapper) {
+    public TimesheetServiceImpl(TimesheetRepository timesheetRepository, TimesheetMapper timesheetMapper,
+            EmployeeClient employeeClient) {
         this.timesheetRepository = timesheetRepository;
         this.timesheetMapper = timesheetMapper;
+        this.employeeClient = employeeClient;
     }
 
     @Override
     public TimesheetResponse createTimesheet(TimesheetCreateRequest req) {
+        if (!employeeClient.existsById(req.employeeId())) {
+            throw new IllegalArgumentException("Employee with id " + req.employeeId() + " not found");
+        }
         Timesheet ts = timesheetMapper.toEntity(req);
         return timesheetMapper.toResponse(timesheetRepository.save(ts));
     }

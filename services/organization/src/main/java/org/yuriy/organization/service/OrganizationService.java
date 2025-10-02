@@ -24,4 +24,6 @@ public interface OrganizationService {
     OrganizationResponse partialUpdateOrganization(Long id, OrganizationPatchRequest req);
 
     void deleteOrganization(Long id);
+
+    Boolean existsById(Long id);
 }

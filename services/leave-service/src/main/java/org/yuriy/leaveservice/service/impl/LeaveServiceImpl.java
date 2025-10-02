@@ -13,6 +13,7 @@ import org.yuriy.leaveservice.entity.Leave;
 import org.yuriy.leaveservice.entity.LeaveStatus;
 import org.yuriy.leaveservice.repository.LeaveRepository;
 import org.yuriy.leaveservice.repository.specification.LeaveSpecification;
+import org.yuriy.leaveservice.service.EmployeeClient;
 import org.yuriy.leaveservice.service.LeaveService;
 
 import java.util.ArrayList;
@@ -24,15 +25,23 @@ public class LeaveServiceImpl implements LeaveService {
 
     private final LeaveRepository leaveRepository;
     private final LeaveMapper leaveMapper;
+    private final EmployeeClient employeeClient;
 
-    public LeaveServiceImpl(LeaveRepository leaveRepository, LeaveMapper leaveMapper) {
+    public LeaveServiceImpl(LeaveRepository leaveRepository, LeaveMapper leaveMapper, EmployeeClient employeeClient) {
         this.leaveRepository = leaveRepository;
         this.leaveMapper = leaveMapper;
+        this.employeeClient = employeeClient;
     }
 
     @Override
     @Transactional
     public LeaveResponse createLeave(LeaveCreateRequest req) {
+        if (!employeeClient.existsById(req.employeeId())) {
+            throw new IllegalArgumentException("Employee with id " + req.employeeId() + " not found");
+        }
+        if (req.endDate().isBefore(req.startDate())) {
+            throw new IllegalArgumentException("End date cannot be before start date");
+        }
         Leave leave = leaveMapper.toEntity(req);
         return leaveMapper.toResponse(leaveRepository.save(leave));
     }

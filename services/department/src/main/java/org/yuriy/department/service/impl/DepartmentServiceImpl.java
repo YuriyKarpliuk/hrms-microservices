@@ -15,6 +15,8 @@ import org.yuriy.department.exception.ResourceNotFoundException;
 import org.yuriy.department.repository.DepartmentRepository;
 import org.yuriy.department.repository.specification.DepartmentSpecification;
 import org.yuriy.department.service.DepartmentService;
+import org.yuriy.department.service.EmployeeClient;
+import org.yuriy.department.service.OrganizationClient;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,10 +27,15 @@ public class DepartmentServiceImpl implements DepartmentService {
 
     private final DepartmentRepository departmentRepository;
     private final DepartmentMapper departmentMapper;
+    private final OrganizationClient organizationClient;
+    private final EmployeeClient employeeClient;
 
-    public DepartmentServiceImpl(DepartmentRepository departmentRepository, DepartmentMapper departmentMapper) {
+    public DepartmentServiceImpl(DepartmentRepository departmentRepository, DepartmentMapper departmentMapper,
+            OrganizationClient organizationClient, EmployeeClient employeeClient) {
         this.departmentRepository = departmentRepository;
         this.departmentMapper = departmentMapper;
+        this.organizationClient = organizationClient;
+        this.employeeClient = employeeClient;
     }
 
 
@@ -69,6 +76,12 @@ public class DepartmentServiceImpl implements DepartmentService {
     @Override
     @Transactional
     public DepartmentResponse createNewDepartment(DepartmentCreateRequest req) {
+        if (!organizationClient.existsById(req.orgId())) {
+            throw new IllegalArgumentException("Organization with id " + req.orgId() + " not found");
+        }
+        if (!employeeClient.existsById(req.managerId())) {
+            throw new IllegalArgumentException("Employee (manager) with id " + req.managerId() + " not found");
+        }
         if (departmentRepository.existsByNameAndOrgId(req.name(), req.orgId())) {
             throw new IllegalArgumentException("Department with such name already exists in this org");
         }
