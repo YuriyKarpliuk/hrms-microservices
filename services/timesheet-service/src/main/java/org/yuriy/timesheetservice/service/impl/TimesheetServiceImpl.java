@@ -1,5 +1,6 @@
 package org.yuriy.timesheetservice.service.impl;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -10,29 +11,29 @@ import org.yuriy.timesheetservice.dto.request.TimesheetCreateRequest;
 import org.yuriy.timesheetservice.dto.request.TimesheetSearchRequest;
 import org.yuriy.timesheetservice.dto.response.TimesheetResponse;
 import org.yuriy.timesheetservice.entity.Timesheet;
+import org.yuriy.timesheetservice.entity.ActivityType;
+import org.yuriy.timesheetservice.entity.TimesheetEntry;
 import org.yuriy.timesheetservice.entity.TimesheetStatus;
+import org.yuriy.timesheetservice.kafka.TimesheetApprovedEvent;
+import org.yuriy.timesheetservice.kafka.TimesheetEventProducer;
 import org.yuriy.timesheetservice.repository.TimesheetRepository;
 import org.yuriy.timesheetservice.repository.specification.TimesheetSpecification;
 import org.yuriy.timesheetservice.service.EmployeeClient;
 import org.yuriy.timesheetservice.service.TimesheetService;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 @Transactional()
+@RequiredArgsConstructor
 public class TimesheetServiceImpl implements TimesheetService {
 
     private final TimesheetRepository timesheetRepository;
     private final TimesheetMapper timesheetMapper;
     private final EmployeeClient employeeClient;
-
-    public TimesheetServiceImpl(TimesheetRepository timesheetRepository, TimesheetMapper timesheetMapper,
-            EmployeeClient employeeClient) {
-        this.timesheetRepository = timesheetRepository;
-        this.timesheetMapper = timesheetMapper;
-        this.employeeClient = employeeClient;
-    }
+    private final TimesheetEventProducer timesheetEventProducer;
 
     @Override
     public TimesheetResponse createTimesheet(TimesheetCreateRequest req) {
@@ -88,7 +89,16 @@ public class TimesheetServiceImpl implements TimesheetService {
         Timesheet ts = timesheetRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Timesheet not found with id " + id));
         ts.setStatus(TimesheetStatus.APPROVED);
-        return timesheetMapper.toResponse(timesheetRepository.save(ts));
+        double totalHours = ts.getEntries().stream().mapToDouble(e -> e.getHours() != null ? e.getHours() : 0.0).sum();
+        timesheetRepository.save(ts);
+        timesheetEventProducer.sendTimesheetApproved(new TimesheetApprovedEvent(
+                ts.getId(),
+                ts.getEmployeeId(),
+                ts.getWeekStart(),
+                ts.getWeekEnd(),
+                totalHours
+        ));
+        return timesheetMapper.toResponse(ts);
     }
 
     @Transactional
@@ -100,4 +110,39 @@ public class TimesheetServiceImpl implements TimesheetService {
         return timesheetMapper.toResponse(timesheetRepository.save(ts));
     }
 
+    @Transactional
+    public void markLeaveDays(Long employeeId, LocalDate startDate, LocalDate endDate, String type) {
+        LocalDate weekStart = startDate.with(java.time.DayOfWeek.MONDAY);
+        LocalDate weekEnd = weekStart.plusDays(6);
+
+        Timesheet timesheet = timesheetRepository.findByEmployeeIdAndWeekStart(employeeId, weekStart)
+                .orElse(Timesheet.builder()
+                        .employeeId(employeeId)
+                        .weekStart(weekStart)
+                        .weekEnd(weekEnd)
+                        .status(TimesheetStatus.DRAFT)
+                        .entries(new ArrayList<>())
+                        .build());
+
+        LocalDate date = startDate;
+        while (!date.isAfter(endDate)) {
+            LocalDate finalDate = date;
+            TimesheetEntry entry = timesheet.getEntries().stream()
+                    .filter(e -> e.getWorkDate().equals(finalDate))
+                    .findFirst()
+                    .orElse(TimesheetEntry.builder()
+                            .workDate(date)
+                            .activityType(ActivityType.valueOf(type))
+                            .timesheet(timesheet)
+                            .build());
+
+            entry.setActivityType(ActivityType.valueOf(type));
+            entry.setHours(0.0);
+
+            timesheet.getEntries().add(entry);
+            date = date.plusDays(1);
+        }
+
+        timesheetRepository.save(timesheet);
+    }
 }

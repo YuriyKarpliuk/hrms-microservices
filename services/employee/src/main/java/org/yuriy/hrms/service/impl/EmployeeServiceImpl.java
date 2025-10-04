@@ -2,6 +2,7 @@ package org.yuriy.hrms.service.impl;
 
 import io.micrometer.common.util.StringUtils;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -16,28 +17,28 @@ import org.yuriy.hrms.dto.response.EmployeeResponse;
 import org.yuriy.hrms.entity.Employee;
 import org.yuriy.hrms.entity.Employee.Status;
 import org.yuriy.hrms.exception.ResourceNotFoundException;
+import org.yuriy.hrms.kafka.EmployeeCreatedEvent;
+import org.yuriy.hrms.kafka.EmployeeDeletedEvent;
+import org.yuriy.hrms.kafka.EmployeeEventProducer;
+import org.yuriy.hrms.kafka.EmployeeUpdatedEvent;
 import org.yuriy.hrms.repository.EmployeeRepository;
 import org.yuriy.hrms.repository.specification.EmployeeSpecification;
 import org.yuriy.hrms.service.EmployeeService;
 import org.yuriy.hrms.service.KeycloakUserService;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final EmployeeMapper employeeMapper;
     private final KeycloakUserService keycloakUserService;
-
-    public EmployeeServiceImpl(EmployeeRepository employeeRepository, EmployeeMapper employeeMapper,
-            KeycloakUserService keycloakUserService) {
-        this.employeeRepository = employeeRepository;
-        this.employeeMapper = employeeMapper;
-        this.keycloakUserService = keycloakUserService;
-    }
+    private final EmployeeEventProducer employeeEventProducer;
 
     @Override
     public Page<EmployeeResponse> searchEmployees(EmployeeSearchRequest request, Pageable pageable) {
@@ -123,7 +124,20 @@ public class EmployeeServiceImpl implements EmployeeService {
         var e = employeeMapper.toEntity(req);
         e.setUserId(keyCloakUserId);
         validateEmployment(e);
-        return employeeMapper.toResponse(employeeRepository.save(e));
+
+        employeeRepository.save(e);
+        employeeEventProducer.sendEmployeeCreated(new EmployeeCreatedEvent(
+                e.getId(),
+                e.getOrgId(),
+                e.getDeptId(),
+                e.getEmail(),
+                e.getFirstName(),
+                e.getLastName(),
+                e.getPosition(),
+                e.getHiredAt(),
+                req.status().toString()
+        ));
+        return employeeMapper.toResponse(e);
     }
 
     @Override
@@ -143,7 +157,17 @@ public class EmployeeServiceImpl implements EmployeeService {
             keycloakUserService.updateUser(e.getUserId(), e.getEmail(), e.getEmail(), e.getFirstName(),
                     e.getLastName());
         }
-        return employeeMapper.toResponse(employeeRepository.save(e));
+
+        employeeRepository.save(e);
+
+        employeeEventProducer.sendEmployeeUpdated(new EmployeeUpdatedEvent(
+                e.getId(),
+                e.getEmail(),
+                e.getPosition(),
+                e.getDeptId(),
+                e.getOrgId()
+        ));
+        return employeeMapper.toResponse(e);
     }
 
     @Override
@@ -163,7 +187,16 @@ public class EmployeeServiceImpl implements EmployeeService {
             keycloakUserService.updateUser(e.getUserId(), e.getEmail(), e.getEmail(), e.getFirstName(),
                     e.getLastName());
         }
-        return employeeMapper.toResponse(employeeRepository.save(e));
+        employeeRepository.save(e);
+
+        employeeEventProducer.sendEmployeeUpdated(new EmployeeUpdatedEvent(
+                e.getId(),
+                e.getEmail(),
+                e.getPosition(),
+                e.getDeptId(),
+                e.getOrgId()
+        ));
+        return employeeMapper.toResponse(e);
     }
 
     @Override
@@ -176,6 +209,11 @@ public class EmployeeServiceImpl implements EmployeeService {
             keycloakUserService.deleteUser(userId);
         }
         employeeRepository.deleteById(id);
+        employeeEventProducer.sendEmployeeDeleted(new EmployeeDeletedEvent(
+                employee.getId(),
+                employee.getOrgId(),
+                employee.getDeptId(),
+                employee.getTerminatedAt() != null ? employee.getTerminatedAt() : LocalDate.now(), Status.TERMINATED));
     }
 
     @Override
@@ -186,8 +224,11 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public EmployeeBasicResponse getBasicInfo(Long id) {
         return employeeRepository.findById(id)
-                .map(emp -> new EmployeeBasicResponse(emp.getId(), emp.getFirstName(), emp.getLastName(),
-                        emp.getEmail(), emp.getPosition()))
+                .map(emp -> {
+                    List<String> roles = keycloakUserService.getUserRoles(emp.getUserId());
+                    return new EmployeeBasicResponse(emp.getId(), emp.getFirstName(), emp.getLastName(),
+                            emp.getEmail(), emp.getPosition(), roles);
+                })
                 .orElseThrow(() -> new EntityNotFoundException("Employee not found with id " + id));
     }
 

@@ -1,5 +1,6 @@
 package org.yuriy.leaveservice.service.impl;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -11,6 +12,10 @@ import org.yuriy.leaveservice.dto.request.LeaveSearchRequest;
 import org.yuriy.leaveservice.dto.response.LeaveResponse;
 import org.yuriy.leaveservice.entity.Leave;
 import org.yuriy.leaveservice.entity.LeaveStatus;
+import org.yuriy.leaveservice.kafka.LeaveApprovedEvent;
+import org.yuriy.leaveservice.kafka.LeaveEventProducer;
+import org.yuriy.leaveservice.kafka.LeaveRejectedEvent;
+import org.yuriy.leaveservice.kafka.LeaveRequestedEvent;
 import org.yuriy.leaveservice.repository.LeaveRepository;
 import org.yuriy.leaveservice.repository.specification.LeaveSpecification;
 import org.yuriy.leaveservice.service.EmployeeClient;
@@ -21,21 +26,17 @@ import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class LeaveServiceImpl implements LeaveService {
 
     private final LeaveRepository leaveRepository;
     private final LeaveMapper leaveMapper;
     private final EmployeeClient employeeClient;
+    private final LeaveEventProducer leaveEventProducer;
 
-    public LeaveServiceImpl(LeaveRepository leaveRepository, LeaveMapper leaveMapper, EmployeeClient employeeClient) {
-        this.leaveRepository = leaveRepository;
-        this.leaveMapper = leaveMapper;
-        this.employeeClient = employeeClient;
-    }
-
-    @Override
     @Transactional
-    public LeaveResponse createLeave(LeaveCreateRequest req) {
+    @Override
+    public LeaveResponse requestLeave(LeaveCreateRequest req) {
         if (!employeeClient.existsById(req.employeeId())) {
             throw new IllegalArgumentException("Employee with id " + req.employeeId() + " not found");
         }
@@ -43,7 +44,15 @@ public class LeaveServiceImpl implements LeaveService {
             throw new IllegalArgumentException("End date cannot be before start date");
         }
         Leave leave = leaveMapper.toEntity(req);
-        return leaveMapper.toResponse(leaveRepository.save(leave));
+        leaveRepository.save(leave);
+        leaveEventProducer.sendLeaveRequested(new LeaveRequestedEvent(
+                leave.getId(),
+                leave.getEmployeeId(),
+                leave.getStartDate(),
+                leave.getEndDate(),
+                leave.getType().name(),
+                leave.getReason()));
+        return leaveMapper.toResponse(leave);
     }
 
     @Override
@@ -56,20 +65,35 @@ public class LeaveServiceImpl implements LeaveService {
 
     @Override
     @Transactional
-    public LeaveResponse approveLeave(Long leaveId) {
+    public LeaveResponse approveLeave(Long leaveId, Long managerId) {
         Leave leave = leaveRepository.findById(leaveId)
                 .orElseThrow(() -> new RuntimeException("Leave not found"));
         leave.setStatus(LeaveStatus.APPROVED);
-        return leaveMapper.toResponse(leaveRepository.save(leave));
+        leaveRepository.save(leave);
+        leaveEventProducer.sendLeaveApproved(new LeaveApprovedEvent(
+                leave.getId(),
+                leave.getEmployeeId(),
+                leave.getStartDate(),
+                leave.getEndDate(),
+                leave.getType().name(),
+                managerId));
+
+        return leaveMapper.toResponse(leave);
     }
 
     @Override
     @Transactional
-    public LeaveResponse rejectLeave(Long leaveId) {
+    public LeaveResponse rejectLeave(Long leaveId, Long managerId) {
         Leave leave = leaveRepository.findById(leaveId)
                 .orElseThrow(() -> new RuntimeException("Leave not found"));
         leave.setStatus(LeaveStatus.REJECTED);
-        return leaveMapper.toResponse(leaveRepository.save(leave));
+        leaveRepository.save(leave);
+        leaveEventProducer.sendLeaveRejected(new LeaveRejectedEvent(
+                leave.getId(),
+                leave.getEmployeeId(),
+                managerId
+        ));
+        return leaveMapper.toResponse(leave);
     }
 
     @Override

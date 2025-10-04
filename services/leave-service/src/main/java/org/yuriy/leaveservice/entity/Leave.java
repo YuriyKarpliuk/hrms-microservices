@@ -35,5 +35,7 @@ public class Leave {
     @Column(nullable = false)
     private LeaveStatus status;
 
+    private Long actionBy;
+
     private String reason;
 }

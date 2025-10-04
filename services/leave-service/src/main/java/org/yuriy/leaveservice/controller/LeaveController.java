@@ -5,6 +5,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.yuriy.leaveservice.dto.request.LeaveCreateRequest;
@@ -26,7 +28,7 @@ public class LeaveController {
 
     @PostMapping
     public ResponseEntity<LeaveResponse> createLeave(@RequestBody LeaveCreateRequest req) {
-        return ResponseEntity.ok(leaveService.createLeave(req));
+        return ResponseEntity.ok(leaveService.requestLeave(req));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER') or #employeeId == authentication.principal.claims['employeeId']")
@@ -37,14 +39,18 @@ public class LeaveController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{leaveId}/approve")
-    public ResponseEntity<LeaveResponse> approveLeave(@PathVariable Long leaveId) {
-        return ResponseEntity.ok(leaveService.approveLeave(leaveId));
+    public ResponseEntity<LeaveResponse> approveLeave(@PathVariable Long leaveId, Authentication authentication) {
+        Jwt jwt = (Jwt) authentication.getPrincipal();
+        Long managerId = jwt.getClaim("employeeId");
+        return ResponseEntity.ok(leaveService.approveLeave(leaveId, managerId));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PutMapping("/{leaveId}/reject")
-    public ResponseEntity<LeaveResponse> rejectLeave(@PathVariable Long leaveId) {
-        return ResponseEntity.ok(leaveService.rejectLeave(leaveId));
+    public ResponseEntity<LeaveResponse> rejectLeave(@PathVariable Long leaveId, Authentication authentication) {
+        Jwt jwt = (Jwt) authentication.getPrincipal();
+        Long managerId = jwt.getClaim("employeeId");
+        return ResponseEntity.ok(leaveService.rejectLeave(leaveId, managerId));
     }
 
     @GetMapping("/search")

@@ -1,6 +1,7 @@
 package org.yuriy.payrollservice.service.impl;
 
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -25,6 +26,7 @@ import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
+@Slf4j
 public class PayrollServiceImpl implements PayrollService {
 
     private final PayrollRepository payrollRepository;

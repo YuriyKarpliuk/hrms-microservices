@@ -1,0 +1,50 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notifications
+    username: ${POSTGRES_USER:keycloak}
+    password: ${POSTGRES_PASSWORD:keycloak}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: false
+    baseline-description: "init"
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: "http://localhost:9098/realms/HRMS"
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ukar19062005@gmail.com
+    password: bgmp qurr ekby ykrq
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.type.mapping: org.yuriy.hrms.kafka.EmployeeCreatedEvent:org.yuriy.notificationservice.kafka.EmployeeCreatedEvent
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+server:
+  port: ${LEAVES_PORT:8057}
+keycloak:
+  auth-server-url: http://localhost:9098
+  realm: HRMS
+  client-id: hrms-rest-api
+  client-secret: ${KEYCLOAK_CLIENT_SECRET}
