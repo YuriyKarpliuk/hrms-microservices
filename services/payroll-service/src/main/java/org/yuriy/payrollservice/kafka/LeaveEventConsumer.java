@@ -6,7 +6,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.yuriy.payrollservice.service.PayrollService;
-import org.yuriy.payrollservice.service.impl.PayrollServiceImpl;
 
 @Service
 @RequiredArgsConstructor

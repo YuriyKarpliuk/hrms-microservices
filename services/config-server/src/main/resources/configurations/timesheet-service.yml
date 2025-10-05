@@ -28,6 +28,10 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "*"
+        spring.json.type.mapping: >
+          org.yuriy.leaveservice.kafka.LeaveApprovedEvent:org.yuriy.timesheetservice.kafka.LeaveApprovedEvent,
+          org.yuriy.leaveservice.kafka.LeaveRejectedEvent:org.yuriy.timesheetservice.kafka.LeaveRejectedEvent,
+          org.yuriy.leaveservice.kafka.LeaveRequestedEvent:org.yuriy.timesheetservice.kafka.LeaveRequestedEvent
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer

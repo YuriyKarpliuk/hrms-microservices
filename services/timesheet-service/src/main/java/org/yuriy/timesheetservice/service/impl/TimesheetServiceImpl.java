@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.yuriy.timesheetservice.dto.mapper.TimesheetMapper;
 import org.yuriy.timesheetservice.dto.request.TimesheetCreateRequest;
 import org.yuriy.timesheetservice.dto.request.TimesheetSearchRequest;
+import org.yuriy.timesheetservice.dto.response.EmployeeBasicResponse;
 import org.yuriy.timesheetservice.dto.response.TimesheetResponse;
 import org.yuriy.timesheetservice.entity.Timesheet;
 import org.yuriy.timesheetservice.entity.ActivityType;
@@ -94,8 +95,11 @@ public class TimesheetServiceImpl implements TimesheetService {
         ts.setStatus(TimesheetStatus.APPROVED);
         double totalHours = ts.getEntries().stream().mapToDouble(e -> e.getHours() != null ? e.getHours() : 0.0).sum();
         timesheetRepository.save(ts);
+        EmployeeBasicResponse employee = employeeClient.getBasicInfo(ts.getEmployeeId());
+
         timesheetEventProducer.sendTimesheetApproved(new TimesheetApprovedEvent(
                 ts.getId(),
+                employee.email(),
                 ts.getEmployeeId(),
                 ts.getWeekStart(),
                 ts.getWeekEnd(),

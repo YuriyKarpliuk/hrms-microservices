@@ -40,9 +40,13 @@ spring:
           org.yuriy.hrms.kafka.EmployeeCreatedEvent:org.yuriy.notificationservice.kafka.EmployeeCreatedEvent,
           org.yuriy.hrms.kafka.EmployeeUpdatedEvent:org.yuriy.notificationservice.kafka.EmployeeUpdatedEvent,
           org.yuriy.hrms.kafka.EmployeeDeletedEvent:org.yuriy.notificationservice.kafka.EmployeeDeletedEvent,
-          org.yuriy.hrms.kafka.LeaveApprovedEvent:org.yuriy.notificationservice.kafka.LeaveApprovedEvent,
-          org.yuriy.hrms.kafka.LeaveRejectedEvent:org.yuriy.notificationservice.kafka.LeaveRejectedEvent,
-          org.yuriy.hrms.kafka.TimesheetApprovedEvent:org.yuriy.notificationservice.kafka.TimesheetApprovedEvent
+          org.yuriy.leaveservice.kafka.LeaveApprovedEvent:org.yuriy.notificationservice.kafka.LeaveApprovedEvent,
+          org.yuriy.leaveservice.kafka.LeaveRejectedEvent:org.yuriy.notificationservice.kafka.LeaveRejectedEvent,
+          org.yuriy.leaveservice.kafka.LeaveRequestedEvent:org.yuriy.notificationservice.kafka.LeaveRequestedEvent,
+          org.yuriy.timesheetservice.kafka.TimesheetApprovedEvent:org.yuriy.notificationservice.kafka.TimesheetApprovedEvent,
+          org.yuriy.payrollservice.kafka.PayrollCreatedEvent:org.yuriy.notificationservice.kafka.PayrollCreatedEvent,
+          org.yuriy.payrollservice.kafka.PayrollFailedEvent:org.yuriy.notificationservice.kafka.PayrollFailedEvent,
+          org.yuriy.payrollservice.kafka.PayrollPayedEvent:org.yuriy.notificationservice.kafka.PayrollPayedEvent
 
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer

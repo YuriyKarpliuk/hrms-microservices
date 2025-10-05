@@ -20,7 +20,7 @@ public class LeaveEventProducer {
     }
 
     public void sendLeaveApproved(LeaveApprovedEvent event) {
-        approvedTemplate.send("leave-events", event.employeeId().toString(), event);
+        approvedTemplate.send("leave-events", event.employeeEmail(), event);
         log.info("LeaveApprovedEvent sent: {}", event);
     }
 

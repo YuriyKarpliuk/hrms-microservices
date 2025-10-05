@@ -29,7 +29,7 @@ spring:
       properties:
         spring.json.trusted.packages: "*"
         spring.json.type.mapping: >
-          org.yuriy.department.kafka.DepartmentCreatedEvent:org.yuriy.organization.kafka.DepartmentCreatedEvent,
+          org.yuriy.department.de.kafka.DepartmentCreatedEvent:org.yuriy.organization.kafka.DepartmentCreatedEvent,
           org.yuriy.department.kafka.DepartmentUpdatedEvent:org.yuriy.organization.kafka.DepartmentUpdatedEvent,
           org.yuriy.department.kafka.DepartmentDeletedEvent:org.yuriy.organization.kafka.DepartmentDeletedEvent
     producer:

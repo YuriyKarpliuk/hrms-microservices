@@ -1,6 +1,7 @@
 package org.yuriy.payrollservice.service.impl;
 
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +16,10 @@ import org.yuriy.payrollservice.dto.response.PayrollResponse;
 import org.yuriy.payrollservice.dto.response.PayrollWithEmployeeResponse;
 import org.yuriy.payrollservice.entity.Payroll;
 import org.yuriy.payrollservice.entity.PayrollStatus;
+import org.yuriy.payrollservice.kafka.PayrollCreatedEvent;
+import org.yuriy.payrollservice.kafka.PayrollEventProducer;
+import org.yuriy.payrollservice.kafka.PayrollFailedEvent;
+import org.yuriy.payrollservice.kafka.PayrollPayedEvent;
 import org.yuriy.payrollservice.repository.PayrollRepository;
 import org.yuriy.payrollservice.repository.specification.PayrollSpecification;
 import org.yuriy.payrollservice.service.EmployeeClient;
@@ -30,6 +35,7 @@ import java.util.List;
 @Service
 @Transactional(readOnly = true)
 @Slf4j
+@RequiredArgsConstructor
 public class PayrollServiceImpl implements PayrollService {
 
     private final PayrollRepository payrollRepository;
@@ -38,12 +44,8 @@ public class PayrollServiceImpl implements PayrollService {
 
     private final EmployeeClient employeeClient;
 
-    public PayrollServiceImpl(PayrollRepository payrollRepository, PayrollMapper payrollMapper,
-            EmployeeClient employeeClient) {
-        this.payrollRepository = payrollRepository;
-        this.payrollMapper = payrollMapper;
-        this.employeeClient = employeeClient;
-    }
+    private final PayrollEventProducer payrollEventProducer;
+
 
     @Override
     @Transactional
@@ -57,7 +59,11 @@ public class PayrollServiceImpl implements PayrollService {
 
 
         Payroll payroll = payrollMapper.toEntity(r);
-        return payrollMapper.toWithEmployeeResponse(payrollRepository.save(payroll), emp);
+        payrollRepository.save(payroll);
+        payrollEventProducer.sendPayrollCreated(
+                new PayrollCreatedEvent(payroll.getId(), payroll.getEmployeeId(), emp.email(),
+                        payroll.getStatus().toString(), payroll.getPeriodStart(), payroll.getPeriodEnd()));
+        return payrollMapper.toWithEmployeeResponse(payroll, emp);
     }
 
     @Override
@@ -78,7 +84,14 @@ public class PayrollServiceImpl implements PayrollService {
         Payroll payroll = payrollRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Payroll not found with id " + id));
         payroll.setStatus(PayrollStatus.PAID);
-        return payrollMapper.toResponse(payrollRepository.save(payroll));
+        payrollRepository.save(payroll);
+
+        EmployeeBasicResponse emp = employeeClient.getBasicInfo(payroll.getEmployeeId());
+
+        payrollEventProducer.sendPayrollPayed(
+                new PayrollPayedEvent(payroll.getId(), payroll.getEmployeeId(), emp.email(),
+                        payroll.getStatus().toString(), payroll.getPeriodStart(), payroll.getPeriodEnd()));
+        return payrollMapper.toResponse(payroll);
     }
 
     @Override
@@ -87,7 +100,12 @@ public class PayrollServiceImpl implements PayrollService {
         Payroll payroll = payrollRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Payroll not found with id " + id));
         payroll.setStatus(PayrollStatus.FAILED);
-        return payrollMapper.toResponse(payrollRepository.save(payroll));
+        payrollRepository.save(payroll);
+        EmployeeBasicResponse emp = employeeClient.getBasicInfo(payroll.getEmployeeId());
+        payrollEventProducer.sendPayrollFailed(
+                new PayrollFailedEvent(payroll.getId(), payroll.getEmployeeId(), emp.email(),
+                        payroll.getStatus().toString(), payroll.getPeriodStart(), payroll.getPeriodEnd()));
+        return payrollMapper.toResponse(payroll);
     }
 
     @Override

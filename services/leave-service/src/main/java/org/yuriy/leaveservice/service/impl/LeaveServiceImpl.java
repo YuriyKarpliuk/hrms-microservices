@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.yuriy.leaveservice.dto.mapper.LeaveMapper;
 import org.yuriy.leaveservice.dto.request.LeaveCreateRequest;
 import org.yuriy.leaveservice.dto.request.LeaveSearchRequest;
+import org.yuriy.leaveservice.dto.response.EmployeeBasicResponse;
 import org.yuriy.leaveservice.dto.response.LeaveResponse;
 import org.yuriy.leaveservice.entity.Leave;
 import org.yuriy.leaveservice.entity.LeaveStatus;
@@ -45,8 +46,11 @@ public class LeaveServiceImpl implements LeaveService {
         }
         Leave leave = leaveMapper.toEntity(req);
         leaveRepository.save(leave);
+        EmployeeBasicResponse employeeBasicResponse = employeeClient.getBasicInfo(leave.getEmployeeId());
+
         leaveEventProducer.sendLeaveRequested(new LeaveRequestedEvent(
                 leave.getId(),
+                employeeBasicResponse.email(),
                 leave.getEmployeeId(),
                 leave.getStartDate(),
                 leave.getEndDate(),
@@ -70,8 +74,10 @@ public class LeaveServiceImpl implements LeaveService {
                 .orElseThrow(() -> new RuntimeException("Leave not found"));
         leave.setStatus(LeaveStatus.APPROVED);
         leaveRepository.save(leave);
+        EmployeeBasicResponse employeeBasicResponse = employeeClient.getBasicInfo(leave.getEmployeeId());
         leaveEventProducer.sendLeaveApproved(new LeaveApprovedEvent(
                 leave.getId(),
+                employeeBasicResponse.email(),
                 leave.getEmployeeId(),
                 leave.getStartDate(),
                 leave.getEndDate(),
@@ -88,8 +94,11 @@ public class LeaveServiceImpl implements LeaveService {
                 .orElseThrow(() -> new RuntimeException("Leave not found"));
         leave.setStatus(LeaveStatus.REJECTED);
         leaveRepository.save(leave);
+        EmployeeBasicResponse employeeBasicResponse = employeeClient.getBasicInfo(leave.getEmployeeId());
+
         leaveEventProducer.sendLeaveRejected(new LeaveRejectedEvent(
                 leave.getId(),
+                employeeBasicResponse.email(),
                 leave.getEmployeeId(),
                 managerId,
                 leave.getStartDate(),

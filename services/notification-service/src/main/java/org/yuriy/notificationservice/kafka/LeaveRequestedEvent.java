@@ -1,4 +1,4 @@
-package org.yuriy.payrollservice.kafka;
+package org.yuriy.notificationservice.kafka;
 
 import java.time.LocalDate;
 
