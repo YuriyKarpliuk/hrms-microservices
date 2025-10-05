@@ -1,0 +1,61 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notifications
+    username: ${POSTGRES_USER:keycloak}
+    password: ${POSTGRES_PASSWORD:keycloak}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: false
+    baseline-description: "init"
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: "http://localhost:9098/realms/HRMS"
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ukar19062005@gmail.com
+    password: bgmp qurr ekby ykrq
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.type.mapping: >
+          org.yuriy.hrms.kafka.EmployeeCreatedEvent:org.yuriy.notificationservice.kafka.EmployeeCreatedEvent,
+          org.yuriy.hrms.kafka.EmployeeUpdatedEvent:org.yuriy.notificationservice.kafka.EmployeeUpdatedEvent,
+          org.yuriy.hrms.kafka.EmployeeDeletedEvent:org.yuriy.notificationservice.kafka.EmployeeDeletedEvent,
+          org.yuriy.leaveservice.kafka.LeaveApprovedEvent:org.yuriy.notificationservice.kafka.LeaveApprovedEvent,
+          org.yuriy.leaveservice.kafka.LeaveRejectedEvent:org.yuriy.notificationservice.kafka.LeaveRejectedEvent,
+          org.yuriy.leaveservice.kafka.LeaveRequestedEvent:org.yuriy.notificationservice.kafka.LeaveRequestedEvent,
+          org.yuriy.timesheetservice.kafka.TimesheetApprovedEvent:org.yuriy.notificationservice.kafka.TimesheetApprovedEvent,
+          org.yuriy.payrollservice.kafka.PayrollCreatedEvent:org.yuriy.notificationservice.kafka.PayrollCreatedEvent,
+          org.yuriy.payrollservice.kafka.PayrollFailedEvent:org.yuriy.notificationservice.kafka.PayrollFailedEvent,
+          org.yuriy.payrollservice.kafka.PayrollPayedEvent:org.yuriy.notificationservice.kafka.PayrollPayedEvent
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+server:
+  port: ${LEAVES_PORT:8057}
+keycloak:
+  auth-server-url: http://localhost:9098
+  realm: HRMS
+  client-id: hrms-rest-api
+  client-secret: ${KEYCLOAK_CLIENT_SECRET}

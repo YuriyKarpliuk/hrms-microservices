@@ -1,5 +1,6 @@
 package org.yuriy.department.service.impl;
 
+import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -12,25 +13,30 @@ import org.yuriy.department.dto.request.DepartmentSearchRequest;
 import org.yuriy.department.dto.response.DepartmentResponse;
 import org.yuriy.department.entity.Department;
 import org.yuriy.department.exception.ResourceNotFoundException;
+import org.yuriy.department.kafka.DepartmentCreatedEvent;
+import org.yuriy.department.kafka.DepartmentDeletedEvent;
+import org.yuriy.department.kafka.DepartmentEventProducer;
+import org.yuriy.department.kafka.DepartmentUpdatedEvent;
 import org.yuriy.department.repository.DepartmentRepository;
 import org.yuriy.department.repository.specification.DepartmentSpecification;
 import org.yuriy.department.service.DepartmentService;
+import org.yuriy.department.service.EmployeeClient;
+import org.yuriy.department.service.OrganizationClient;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
+@AllArgsConstructor
 public class DepartmentServiceImpl implements DepartmentService {
 
     private final DepartmentRepository departmentRepository;
     private final DepartmentMapper departmentMapper;
-
-    public DepartmentServiceImpl(DepartmentRepository departmentRepository, DepartmentMapper departmentMapper) {
-        this.departmentRepository = departmentRepository;
-        this.departmentMapper = departmentMapper;
-    }
-
+    private final OrganizationClient organizationClient;
+    private final EmployeeClient employeeClient;
+    private final DepartmentEventProducer departmentEventProducer;
 
     @Override
     public Page<DepartmentResponse> searchDepartments(DepartmentSearchRequest request, Pageable pageable) {
@@ -69,11 +75,24 @@ public class DepartmentServiceImpl implements DepartmentService {
     @Override
     @Transactional
     public DepartmentResponse createNewDepartment(DepartmentCreateRequest req) {
+        if (!organizationClient.existsById(req.orgId())) {
+            throw new IllegalArgumentException("Organization with id " + req.orgId() + " not found");
+        }
+        if (!employeeClient.existsById(req.managerId())) {
+            throw new IllegalArgumentException("Employee (manager) with id " + req.managerId() + " not found");
+        }
+        if (!employeeClient.getEmployeeBasicInfo(req.managerId()).roles().contains("MANAGER")) {
+            throw new IllegalArgumentException("Employee with id " + req.managerId() + " is not a manager");
+        }
         if (departmentRepository.existsByNameAndOrgId(req.name(), req.orgId())) {
             throw new IllegalArgumentException("Department with such name already exists in this org");
         }
         var d = departmentMapper.toEntity(req);
-        return departmentMapper.toResponse(departmentRepository.save(d));
+        departmentRepository.save(d);
+        departmentEventProducer.sendDepartmentCreated(
+                new DepartmentCreatedEvent(d.getId(), d.getOrgId(), d.getName(), d.getParent().getId(),
+                        d.getManagerId()));
+        return departmentMapper.toResponse(d);
     }
 
     @Override
@@ -88,14 +107,25 @@ public class DepartmentServiceImpl implements DepartmentService {
         }
 
         departmentMapper.applyPatch(d, req);
-        return departmentMapper.toResponse(departmentRepository.save(d));
+        departmentRepository.save(d);
+        departmentEventProducer.sendDepartmentUpdated(
+                new DepartmentUpdatedEvent(d.getId(), d.getOrgId(), d.getName(), d.getParent().getId(),
+                        d.getManagerId()));
+        return departmentMapper.toResponse(d);
     }
 
 
     @Override
     @Transactional
     public void deleteDepartment(Long id) {
+        Department department = departmentRepository.findById(id).orElseThrow(() ->
+                new ResourceNotFoundException("Department not found with id " + id));
+
         departmentRepository.deleteById(id);
+        departmentEventProducer.sendDepartmentDeleted(
+                new DepartmentDeletedEvent(department.getId(), department.getOrgId(), department.getName(),
+                        department.getParent().getId(),
+                        department.getManagerId()));
     }
 
 }

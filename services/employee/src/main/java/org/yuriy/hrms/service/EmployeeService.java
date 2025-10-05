@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.yuriy.hrms.dto.request.EmployeeCreateRequest;
 import org.yuriy.hrms.dto.request.EmployeePatchRequest;
 import org.yuriy.hrms.dto.request.EmployeeSearchRequest;
+import org.yuriy.hrms.dto.response.EmployeeBasicResponse;
 import org.yuriy.hrms.dto.response.EmployeeResponse;
 
 import java.util.List;
@@ -24,4 +25,8 @@ public interface EmployeeService {
     EmployeeResponse patch(Long id, EmployeePatchRequest req);
 
     void deleteEmployee(Long id);
+
+    Boolean existsById(Long id);
+
+    EmployeeBasicResponse getBasicInfo(Long id);
 }

@@ -10,7 +10,7 @@ import java.time.LocalDate;
 
 public record EmployeeCreateRequest(@NotNull Long orgId,
         Long deptId,
-        Long positionId,
+        String position,
         Long managerId,
         Long hrId,
 

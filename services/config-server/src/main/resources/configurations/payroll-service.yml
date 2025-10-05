@@ -19,6 +19,22 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: "http://localhost:9098/realms/HRMS"
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: payroll-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.type.mapping: >
+          org.yuriy.leaveservice.kafka.LeaveApprovedEvent:org.yuriy.payrollservice.kafka.LeaveApprovedEvent,
+          org.yuriy.leaveservice.kafka.LeaveRejectedEvent:org.yuriy.payrollservice.kafka.LeaveRejectedEvent,
+          org.yuriy.leaveservice.kafka.LeaveRequestedEvent:org.yuriy.payrollservice.kafka.LeaveRequestedEvent
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 server:
   port: ${PAYROLL_PORT:8056}
 keycloak:
@@ -26,3 +42,4 @@ keycloak:
   realm: HRMS
   client-id: hrms-rest-api
   client-secret: ${KEYCLOAK_CLIENT_SECRET}
+

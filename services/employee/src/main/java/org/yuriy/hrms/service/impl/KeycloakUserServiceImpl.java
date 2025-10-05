@@ -168,5 +168,19 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
                 .block();
     }
 
+    @Override
+    public List<String> getUserRoles(String userId) {
+        String accessToken = getAdminAccessToken();
 
+        String rolesUrl = keycloakUrl + "/admin/realms/" + realm + "/users/" + userId + "/role-mappings/realm";
+
+        return webClient.get()
+                .uri(rolesUrl)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                .retrieve()
+                .bodyToFlux(Map.class)
+                .map(role -> (String) role.get("name"))
+                .collectList()
+                .block();
+    }
 }

@@ -67,4 +67,9 @@ public class OrganizationController {
             @PageableDefault(sort = "name") Pageable pageable) {
         return ResponseEntity.ok(organizationService.searchOrganizations(request, pageable));
     }
+
+    @GetMapping("/{id}/exists")
+    public ResponseEntity<Boolean> existsById(@PathVariable Long id) {
+        return ResponseEntity.ok(organizationService.existsById(id));
+    }
 }

@@ -10,13 +10,14 @@ import org.yuriy.leaveservice.dto.response.LeaveResponse;
 import java.util.List;
 
 public interface LeaveService {
-    LeaveResponse createLeave(LeaveCreateRequest req);
+
+    LeaveResponse requestLeave(LeaveCreateRequest req);
 
     List<LeaveResponse> getLeavesByEmployee(Long employeeId);
 
-    LeaveResponse approveLeave(Long leaveId);
+    LeaveResponse approveLeave(Long leaveId, Long managerId);
 
-    LeaveResponse rejectLeave(Long leaveId);
+    LeaveResponse rejectLeave(Long leaveId, Long managerId);
 
     Page<LeaveResponse> searchLeaves(LeaveSearchRequest request, Pageable pageable);
 }

@@ -7,6 +7,7 @@ import org.yuriy.timesheetservice.dto.response.TimesheetResponse;
 import org.yuriy.timesheetservice.entity.ActivityType;
 import org.yuriy.timesheetservice.entity.Timesheet;
 import org.yuriy.timesheetservice.entity.TimesheetEntry;
+import org.yuriy.timesheetservice.entity.TimesheetStatus;
 
 
 @Component
@@ -17,6 +18,7 @@ public class TimesheetMapper {
         ts.setEmployeeId(req.employeeId());
         ts.setWeekStart(req.weekStart());
         ts.setWeekEnd(req.weekEnd());
+        ts.setStatus(TimesheetStatus.DRAFT);
 
         ts.setEntries(req.entries().stream().map(e -> {
             TimesheetEntry entry = new TimesheetEntry();

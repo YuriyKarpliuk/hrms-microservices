@@ -5,6 +5,7 @@ public enum ActivityType {
     OVERTIME,
     VACATION,
     SICK,
+    UNPAID,
     TRAINING,
     BUSINESS_TRIP
 }

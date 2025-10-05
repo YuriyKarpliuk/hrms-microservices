@@ -6,10 +6,11 @@ import org.yuriy.hrms.entity.Employee.MaritalStatus;
 import org.yuriy.hrms.entity.Employee.Gender;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record EmployeeResponse(Long id, Long orgId, String userId, Long deptId, Long positionId, Long managerId,
-        Long hrId, String email, String firstName, String lastName, String phone, Status status, Gender gender,
+public record EmployeeResponse(Long id, Long orgId, String userId, Long deptId, String position, Long managerId,
+        Long hrId, String email, List<String> roles, String firstName, String lastName, String phone, Status status, Gender gender,
         MaritalStatus maritalStatus, String taxNumber, String about, String officeLocation, LocalDate birthDate,
         Integer age, LocalDate hiredAt, LocalDate terminatedAt, String avatarUrl, String cvKey) {
 }

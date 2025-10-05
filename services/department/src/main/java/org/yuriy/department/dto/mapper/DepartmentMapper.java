@@ -17,11 +17,8 @@ public class DepartmentMapper {
     }
 
     public Department toEntity(DepartmentCreateRequest r) {
-        Department parent = new Department();
-        if (r.parentId() != null) {
-            parent = (departmentRepository.findById(r.parentId())
-                    .orElseThrow(() -> new IllegalArgumentException("Parent department not found")));
-        }
+        Department parent = (departmentRepository.findById(r.parentId())
+                .orElseThrow(() -> new IllegalArgumentException("Parent department not found")));
         return Department.builder().name(r.name()).orgId(r.orgId()).managerId(r.managerId()).parent(parent)
                 .build();
     }

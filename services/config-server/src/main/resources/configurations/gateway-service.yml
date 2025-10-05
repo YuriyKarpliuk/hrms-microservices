@@ -4,6 +4,8 @@ server:
 spring:
   cloud:
     gateway:
+      default-filters:
+        - TokenRelay
       server:
         webflux:
           discovery:
@@ -37,6 +39,16 @@ spring:
                 - Path=/api/v1/payrolls/**
   security:
     oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: hrms-rest-api
+            client-secret: ${KEYCLOAK_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            redirect-uri: "http://localhost:8222/login/oauth2/code/keycloak"
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:9098/realms/HRMS
       resourceserver:
         jwt:
           issuer-uri: "http://localhost:9098/realms/HRMS"

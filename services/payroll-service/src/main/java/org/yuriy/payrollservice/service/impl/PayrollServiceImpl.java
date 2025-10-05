@@ -1,6 +1,8 @@
 package org.yuriy.payrollservice.service.impl;
 
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -9,35 +11,59 @@ import org.springframework.transaction.annotation.Transactional;
 import org.yuriy.payrollservice.dto.mapper.PayrollMapper;
 import org.yuriy.payrollservice.dto.request.PayrollCreateRequest;
 import org.yuriy.payrollservice.dto.request.PayrollSearchRequest;
+import org.yuriy.payrollservice.dto.response.EmployeeBasicResponse;
 import org.yuriy.payrollservice.dto.response.PayrollResponse;
+import org.yuriy.payrollservice.dto.response.PayrollWithEmployeeResponse;
 import org.yuriy.payrollservice.entity.Payroll;
 import org.yuriy.payrollservice.entity.PayrollStatus;
+import org.yuriy.payrollservice.kafka.PayrollCreatedEvent;
+import org.yuriy.payrollservice.kafka.PayrollEventProducer;
+import org.yuriy.payrollservice.kafka.PayrollFailedEvent;
+import org.yuriy.payrollservice.kafka.PayrollPayedEvent;
 import org.yuriy.payrollservice.repository.PayrollRepository;
 import org.yuriy.payrollservice.repository.specification.PayrollSpecification;
+import org.yuriy.payrollservice.service.EmployeeClient;
 import org.yuriy.payrollservice.service.PayrollService;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
 
 @Service
 @Transactional(readOnly = true)
+@Slf4j
+@RequiredArgsConstructor
 public class PayrollServiceImpl implements PayrollService {
 
     private final PayrollRepository payrollRepository;
 
     private final PayrollMapper payrollMapper;
 
-    public PayrollServiceImpl(PayrollRepository payrollRepository, PayrollMapper payrollMapper) {
-        this.payrollRepository = payrollRepository;
-        this.payrollMapper = payrollMapper;
-    }
+    private final EmployeeClient employeeClient;
+
+    private final PayrollEventProducer payrollEventProducer;
+
 
     @Override
     @Transactional
-    public PayrollResponse createPayroll(PayrollCreateRequest r) {
+    public PayrollWithEmployeeResponse createPayroll(PayrollCreateRequest r) {
+
+        if (!employeeClient.existsById(r.employeeId())) {
+            throw new IllegalArgumentException("Employee with id " + r.employeeId() + " not found");
+        }
+
+        EmployeeBasicResponse emp = employeeClient.getBasicInfo(r.employeeId());
+
+
         Payroll payroll = payrollMapper.toEntity(r);
-        return payrollMapper.toResponse(payrollRepository.save(payroll));
+        payrollRepository.save(payroll);
+        payrollEventProducer.sendPayrollCreated(
+                new PayrollCreatedEvent(payroll.getId(), payroll.getEmployeeId(), emp.email(),
+                        payroll.getStatus().toString(), payroll.getPeriodStart(), payroll.getPeriodEnd()));
+        return payrollMapper.toWithEmployeeResponse(payroll, emp);
     }
 
     @Override
@@ -58,7 +84,14 @@ public class PayrollServiceImpl implements PayrollService {
         Payroll payroll = payrollRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Payroll not found with id " + id));
         payroll.setStatus(PayrollStatus.PAID);
-        return payrollMapper.toResponse(payrollRepository.save(payroll));
+        payrollRepository.save(payroll);
+
+        EmployeeBasicResponse emp = employeeClient.getBasicInfo(payroll.getEmployeeId());
+
+        payrollEventProducer.sendPayrollPayed(
+                new PayrollPayedEvent(payroll.getId(), payroll.getEmployeeId(), emp.email(),
+                        payroll.getStatus().toString(), payroll.getPeriodStart(), payroll.getPeriodEnd()));
+        return payrollMapper.toResponse(payroll);
     }
 
     @Override
@@ -67,11 +100,16 @@ public class PayrollServiceImpl implements PayrollService {
         Payroll payroll = payrollRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Payroll not found with id " + id));
         payroll.setStatus(PayrollStatus.FAILED);
-        return payrollMapper.toResponse(payrollRepository.save(payroll));
+        payrollRepository.save(payroll);
+        EmployeeBasicResponse emp = employeeClient.getBasicInfo(payroll.getEmployeeId());
+        payrollEventProducer.sendPayrollFailed(
+                new PayrollFailedEvent(payroll.getId(), payroll.getEmployeeId(), emp.email(),
+                        payroll.getStatus().toString(), payroll.getPeriodStart(), payroll.getPeriodEnd()));
+        return payrollMapper.toResponse(payroll);
     }
 
     @Override
-    public Page<PayrollResponse> searchTimesheets(PayrollSearchRequest request, Pageable pageable) {
+    public Page<PayrollResponse> searchPayrolls(PayrollSearchRequest request, Pageable pageable) {
         List<Specification<Payroll>> specifications = new ArrayList<>();
 
         if (request.employeeId() != null) {
@@ -93,5 +131,49 @@ public class PayrollServiceImpl implements PayrollService {
         Specification<Payroll> specification = Specification.allOf(specifications);
 
         return payrollRepository.findAll(specification, pageable).map(payrollMapper::toResponse);
+    }
+
+    @Override
+    public List<PayrollResponse> getPayrollsByEmployee(Long employeeId) {
+        return payrollRepository.findByEmployeeId(employeeId)
+                .stream()
+                .map(payrollMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public void applyLeaveToPayroll(Long employeeId, LocalDate startDate, LocalDate endDate, String type) {
+        long leaveDays = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+
+        payrollRepository.findByEmployeeIdAndPeriodStartLessThanEqualAndPeriodEndGreaterThanEqual(employeeId, startDate,
+                        endDate)
+                .ifPresentOrElse(payroll -> {
+                    BigDecimal dailyRate = payroll.getBaseSalary().divide(BigDecimal.valueOf(
+                                    ChronoUnit.DAYS.between(payroll.getPeriodStart(), payroll.getPeriodEnd()) + 1),
+                            BigDecimal.ROUND_HALF_UP);
+
+                    BigDecimal deduction = calculateDeduction(type, dailyRate, leaveDays);
+
+                    BigDecimal newDeductions = payroll.getDeductions() == null
+                            ? deduction
+                            : payroll.getDeductions().add(deduction);
+
+                    payroll.setDeductions(newDeductions);
+                    payroll.setNetSalary(payroll.getBaseSalary().add(
+                            payroll.getBonus() != null ? payroll.getBonus() : BigDecimal.ZERO
+                    ).subtract(newDeductions));
+
+                    payrollRepository.save(payroll);
+
+                    log.info("Applied leave deduction for emp={}, days={}, type={}, amount={}",
+                            employeeId, leaveDays, type, deduction);
+                }, () -> log.warn("No payroll found for employee {} covering {} - {}", employeeId, startDate, endDate));
+    }
+
+    private BigDecimal calculateDeduction(String leaveType, BigDecimal dailyRate, long days) {
+        return switch (leaveType.toUpperCase()) {
+            case "UNPAID" -> dailyRate.multiply(BigDecimal.valueOf(days));
+            default -> BigDecimal.ZERO;
+        };
     }
 }

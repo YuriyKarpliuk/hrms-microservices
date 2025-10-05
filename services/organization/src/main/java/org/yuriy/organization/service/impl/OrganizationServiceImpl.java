@@ -120,4 +120,9 @@ public class OrganizationServiceImpl implements OrganizationService {
     public void deleteOrganization(Long id) {
         organizationRepository.deleteById(id);
     }
+
+    @Override
+    public Boolean existsById(Long id) {
+        return organizationRepository.existsById(id);
+    }
 }
