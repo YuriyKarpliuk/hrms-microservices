@@ -2,6 +2,7 @@ package org.yuriy.notificationservice.kafka;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.yuriy.notificationservice.dto.response.EmployeeBasicResponse;
@@ -18,6 +19,16 @@ public class NotificationEventConsumer {
     private final EmployeeClient employeeClient;
 
     @KafkaListener(topics = "employee-events", groupId = "notification-service")
+    public void handleEmployeeEvent(ConsumerRecord<String, Object> consumerRecord) {
+        Object event = consumerRecord.value();
+
+        if (event instanceof EmployeeCreatedEvent created) {
+            handleEmployeeCreated(created);
+        } else {
+            log.warn("Received unknown event: {}", consumerRecord);
+        }
+    }
+
     public void handleEmployeeCreated(EmployeeCreatedEvent event) {
         log.info("EmployeeCreatedEvent retrieved: {}", event);
         emailService.sendEmail(event.email(), "Welcome to the company!",

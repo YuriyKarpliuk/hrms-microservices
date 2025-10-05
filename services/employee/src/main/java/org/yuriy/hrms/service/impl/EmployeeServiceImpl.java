@@ -213,7 +213,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 employee.getId(),
                 employee.getOrgId(),
                 employee.getDeptId(),
-                employee.getTerminatedAt() != null ? employee.getTerminatedAt() : LocalDate.now(), Status.TERMINATED));
+                employee.getTerminatedAt() != null ? employee.getTerminatedAt() : LocalDate.now(), Status.TERMINATED.toString()));
     }
 
     @Override

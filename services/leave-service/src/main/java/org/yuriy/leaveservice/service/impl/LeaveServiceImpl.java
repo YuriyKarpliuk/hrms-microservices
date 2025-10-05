@@ -91,7 +91,9 @@ public class LeaveServiceImpl implements LeaveService {
         leaveEventProducer.sendLeaveRejected(new LeaveRejectedEvent(
                 leave.getId(),
                 leave.getEmployeeId(),
-                managerId
+                managerId,
+                leave.getStartDate(),
+                leave.getEndDate()
         ));
         return leaveMapper.toResponse(leave);
     }

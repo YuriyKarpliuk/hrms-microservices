@@ -35,7 +35,14 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.type.mapping: org.yuriy.hrms.kafka.EmployeeCreatedEvent:org.yuriy.notificationservice.kafka.EmployeeCreatedEvent
+        spring.json.trusted.packages: "*"
+        spring.json.type.mapping: >
+          org.yuriy.hrms.kafka.EmployeeCreatedEvent:org.yuriy.notificationservice.kafka.EmployeeCreatedEvent,
+          org.yuriy.hrms.kafka.EmployeeUpdatedEvent:org.yuriy.notificationservice.kafka.EmployeeUpdatedEvent,
+          org.yuriy.hrms.kafka.EmployeeDeletedEvent:org.yuriy.notificationservice.kafka.EmployeeDeletedEvent,
+          org.yuriy.hrms.kafka.LeaveApprovedEvent:org.yuriy.notificationservice.kafka.LeaveApprovedEvent,
+          org.yuriy.hrms.kafka.LeaveRejectedEvent:org.yuriy.notificationservice.kafka.LeaveRejectedEvent,
+          org.yuriy.hrms.kafka.TimesheetApprovedEvent:org.yuriy.notificationservice.kafka.TimesheetApprovedEvent
 
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
