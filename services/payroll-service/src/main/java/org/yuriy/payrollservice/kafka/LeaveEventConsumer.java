@@ -1,20 +1,21 @@
-package org.yuriy.timesheetservice.kafka;
+package org.yuriy.payrollservice.kafka;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
-import org.yuriy.timesheetservice.service.TimesheetService;
+import org.yuriy.payrollservice.service.PayrollService;
+import org.yuriy.payrollservice.service.impl.PayrollServiceImpl;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class LeaveEventConsumer {
 
-    private final TimesheetService timesheetService;
+    private final PayrollService payrollService;
 
-    @KafkaListener(topics = "leave-events", groupId = "timesheet-service")
+    @KafkaListener(topics = "leave-events", groupId = "payroll-service")
     public void handleDepartmentEvent(ConsumerRecord<String, Object> consumerRecord) {
         Object event = consumerRecord.value();
 
@@ -31,12 +32,11 @@ public class LeaveEventConsumer {
 
     public void handleLeaveApproved(LeaveApprovedEvent event) {
         log.info("LeaveApprovedEvent retrieved: {}", event);
-        timesheetService.markLeaveDays(
+        payrollService.applyLeaveToPayroll(
                 event.employeeId(),
                 event.startDate(),
                 event.endDate(),
-                event.type()
-        );
+                event.type());
     }
 
     public void handleLeaveRejected(LeaveRejectedEvent event) {

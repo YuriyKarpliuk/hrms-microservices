@@ -20,6 +20,9 @@ import org.yuriy.payrollservice.repository.specification.PayrollSpecification;
 import org.yuriy.payrollservice.service.EmployeeClient;
 import org.yuriy.payrollservice.service.PayrollService;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -120,4 +123,39 @@ public class PayrollServiceImpl implements PayrollService {
                 .toList();
     }
 
+    @Override
+    public void applyLeaveToPayroll(Long employeeId, LocalDate startDate, LocalDate endDate, String type) {
+        long leaveDays = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+
+        payrollRepository.findByEmployeeIdAndPeriodStartLessThanEqualAndPeriodEndGreaterThanEqual(employeeId, startDate,
+                        endDate)
+                .ifPresentOrElse(payroll -> {
+                    BigDecimal dailyRate = payroll.getBaseSalary().divide(BigDecimal.valueOf(
+                                    ChronoUnit.DAYS.between(payroll.getPeriodStart(), payroll.getPeriodEnd()) + 1),
+                            BigDecimal.ROUND_HALF_UP);
+
+                    BigDecimal deduction = calculateDeduction(type, dailyRate, leaveDays);
+
+                    BigDecimal newDeductions = payroll.getDeductions() == null
+                            ? deduction
+                            : payroll.getDeductions().add(deduction);
+
+                    payroll.setDeductions(newDeductions);
+                    payroll.setNetSalary(payroll.getBaseSalary().add(
+                            payroll.getBonus() != null ? payroll.getBonus() : BigDecimal.ZERO
+                    ).subtract(newDeductions));
+
+                    payrollRepository.save(payroll);
+
+                    log.info("Applied leave deduction for emp={}, days={}, type={}, amount={}",
+                            employeeId, leaveDays, type, deduction);
+                }, () -> log.warn("No payroll found for employee {} covering {} - {}", employeeId, startDate, endDate));
+    }
+
+    private BigDecimal calculateDeduction(String leaveType, BigDecimal dailyRate, long days) {
+        return switch (leaveType.toUpperCase()) {
+            case "UNPAID" -> dailyRate.multiply(BigDecimal.valueOf(days));
+            default -> BigDecimal.ZERO;
+        };
+    }
 }

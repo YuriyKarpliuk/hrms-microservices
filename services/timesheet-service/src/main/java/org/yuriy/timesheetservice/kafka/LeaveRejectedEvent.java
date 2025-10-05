@@ -1,4 +1,4 @@
-package org.yuriy.leaveservice.kafka;
+package org.yuriy.timesheetservice.kafka;
 
 import java.time.LocalDate;
 

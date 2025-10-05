@@ -1,6 +1,7 @@
 package org.yuriy.timesheetservice.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -21,6 +22,7 @@ import org.yuriy.timesheetservice.repository.specification.TimesheetSpecificatio
 import org.yuriy.timesheetservice.service.EmployeeClient;
 import org.yuriy.timesheetservice.service.TimesheetService;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +30,7 @@ import java.util.List;
 @Service
 @Transactional()
 @RequiredArgsConstructor
+@Slf4j
 public class TimesheetServiceImpl implements TimesheetService {
 
     private final TimesheetRepository timesheetRepository;
@@ -112,37 +115,42 @@ public class TimesheetServiceImpl implements TimesheetService {
 
     @Transactional
     public void markLeaveDays(Long employeeId, LocalDate startDate, LocalDate endDate, String type) {
-        LocalDate weekStart = startDate.with(java.time.DayOfWeek.MONDAY);
-        LocalDate weekEnd = weekStart.plusDays(6);
+        LocalDate current = startDate;
 
-        Timesheet timesheet = timesheetRepository.findByEmployeeIdAndWeekStart(employeeId, weekStart)
-                .orElse(Timesheet.builder()
-                        .employeeId(employeeId)
-                        .weekStart(weekStart)
-                        .weekEnd(weekEnd)
-                        .status(TimesheetStatus.DRAFT)
-                        .entries(new ArrayList<>())
-                        .build());
+        while (!current.isAfter(endDate)) {
+            LocalDate weekStart = current.with(DayOfWeek.MONDAY);
+            LocalDate weekEnd = weekStart.plusDays(6);
 
-        LocalDate date = startDate;
-        while (!date.isAfter(endDate)) {
-            LocalDate finalDate = date;
-            TimesheetEntry entry = timesheet.getEntries().stream()
-                    .filter(e -> e.getWorkDate().equals(finalDate))
-                    .findFirst()
-                    .orElse(TimesheetEntry.builder()
-                            .workDate(date)
-                            .activityType(ActivityType.valueOf(type))
-                            .timesheet(timesheet)
+            Timesheet timesheet = timesheetRepository
+                    .findByEmployeeIdAndWeekStart(employeeId, weekStart)
+                    .orElseGet(() -> Timesheet.builder()
+                            .employeeId(employeeId)
+                            .weekStart(weekStart)
+                            .weekEnd(weekEnd)
+                            .status(TimesheetStatus.DRAFT)
+                            .entries(new ArrayList<>())
                             .build());
+
+            LocalDate finalCurrent = current;
+            TimesheetEntry entry = timesheet.getEntries().stream()
+                    .filter(e -> e.getWorkDate().equals(finalCurrent))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        TimesheetEntry newEntry = TimesheetEntry.builder()
+                                .workDate(finalCurrent)
+                                .timesheet(timesheet)
+                                .build();
+                        timesheet.getEntries().add(newEntry);
+                        return newEntry;
+                    });
 
             entry.setActivityType(ActivityType.valueOf(type));
             entry.setHours(0.0);
 
-            timesheet.getEntries().add(entry);
-            date = date.plusDays(1);
-        }
+            log.info("Marked leave {} for employee {} on {}", type, employeeId, current);
 
-        timesheetRepository.save(timesheet);
+            current = current.plusDays(1);
+            timesheetRepository.save(timesheet);
+        }
     }
 }

@@ -8,6 +8,7 @@ import org.yuriy.payrollservice.dto.request.PayrollSearchRequest;
 import org.yuriy.payrollservice.dto.response.PayrollResponse;
 import org.yuriy.payrollservice.dto.response.PayrollWithEmployeeResponse;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface PayrollService {
@@ -25,4 +26,6 @@ public interface PayrollService {
     Page<PayrollResponse> searchPayrolls(PayrollSearchRequest request, Pageable pageable);
 
     List<PayrollResponse> getPayrollsByEmployee(Long employeeId);
+
+    void applyLeaveToPayroll(Long employeeId, LocalDate startDate, LocalDate endDate, String type);
 }
