@@ -14,6 +14,7 @@ import org.yuriy.department.dto.response.DepartmentResponse;
 import org.yuriy.department.entity.Department;
 import org.yuriy.department.exception.ResourceNotFoundException;
 import org.yuriy.department.kafka.DepartmentCreatedEvent;
+import org.yuriy.department.kafka.DepartmentDeletedEvent;
 import org.yuriy.department.kafka.DepartmentEventProducer;
 import org.yuriy.department.kafka.DepartmentUpdatedEvent;
 import org.yuriy.department.repository.DepartmentRepository;
@@ -121,8 +122,8 @@ public class DepartmentServiceImpl implements DepartmentService {
                 new ResourceNotFoundException("Department not found with id " + id));
 
         departmentRepository.deleteById(id);
-        departmentEventProducer.sendDepartmentUpdated(
-                new DepartmentUpdatedEvent(department.getId(), department.getOrgId(), department.getName(),
+        departmentEventProducer.sendDepartmentDeleted(
+                new DepartmentDeletedEvent(department.getId(), department.getOrgId(), department.getName(),
                         department.getParent().getId(),
                         department.getManagerId()));
     }
