@@ -1,17 +1,21 @@
 package org.yuriy.hrms.dto.mapper;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.yuriy.hrms.dto.request.EmployeeCreateRequest;
 import org.yuriy.hrms.dto.request.EmployeePatchRequest;
 import org.yuriy.hrms.dto.response.EmployeeResponse;
 import org.yuriy.hrms.entity.Employee;
 import org.yuriy.hrms.service.KeycloakUserService;
 
+import java.util.Collections;
 import java.util.List;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class EmployeeMapper {
 
     private final KeycloakUserService keycloakUserService;
@@ -84,7 +88,14 @@ public class EmployeeMapper {
     }
 
     public EmployeeResponse toResponse(Employee e) {
-        List<String> roles = keycloakUserService.getUserRoles(e.getUserId());
+        List<String> roles = Collections.emptyList();
+        if (e.getUserId() != null) {
+            try {
+                roles = keycloakUserService.getUserRoles(e.getUserId());
+            } catch (WebClientResponseException.NotFound ex) {
+                log.warn("User {} not found in Keycloak", e.getUserId());
+            }
+        }
         return new EmployeeResponse(e.getId(), e.getOrgId(), e.getUserId(), e.getDeptId(), e.getPosition(),
                 e.getManagerId(), e.getHrId(), e.getEmail(), roles, e.getFirstName(), e.getLastName(), e.getPhone(),
                 e.getStatus(), e.getGender(), e.getMaritalStatus(), e.getTaxNumber(), e.getAbout(),

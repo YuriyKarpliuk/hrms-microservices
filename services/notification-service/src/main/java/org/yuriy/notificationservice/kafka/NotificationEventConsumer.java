@@ -20,9 +20,21 @@ public class NotificationEventConsumer {
 
         if (event instanceof EmployeeCreatedEvent created) {
             handleEmployeeCreated(created);
+        } else if (event instanceof EmployeeUpdatedEvent updateEvent) {
+            handleEmployeeUpdated(updateEvent);
+        } else if (event instanceof EmployeeDeletedEvent employeeDeletedEvent) {
+            handleEmployeeDeleted(employeeDeletedEvent);
         } else {
             log.warn("Received unknown event: {}", consumerRecord);
         }
+    }
+
+    private void handleEmployeeDeleted(EmployeeDeletedEvent employeeDeletedEvent) {
+        log.info("EmployeeDeletedEvent retrieved: {}", employeeDeletedEvent);
+    }
+
+    private void handleEmployeeUpdated(EmployeeUpdatedEvent updateEvent) {
+        log.info("EmployeeUpdatedEvent retrieved: {}", updateEvent);
     }
 
     public void handleEmployeeCreated(EmployeeCreatedEvent event) {
