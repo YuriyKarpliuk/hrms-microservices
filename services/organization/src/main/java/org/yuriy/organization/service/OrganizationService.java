@@ -26,4 +26,6 @@ public interface OrganizationService {
     void deleteOrganization(Long id);
 
     Boolean existsById(Long id);
+
+    String getNameById(Long id);
 }

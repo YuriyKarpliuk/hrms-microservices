@@ -39,6 +39,12 @@ public class OrganizationController {
         return ResponseEntity.ok(organizationService.getOrganizationById(id));
     }
 
+    @GetMapping("/{id}/name")
+    public ResponseEntity<String> getDepartmentName(@PathVariable Long id) {
+        return ResponseEntity.ok(organizationService.getNameById(id));
+    }
+
+
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<OrganizationResponse> createNewOrganization(

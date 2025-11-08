@@ -3,3 +3,12 @@ spring:
     import: optional:configserver:http://localhost:8888
   application:
     name: employee-service
+  servlet:
+    multipart:
+      max-file-size: 30MB
+      max-request-size: 30MB
+app:
+  base-url: http://localhost:8222
+  upload:
+    avatar-dir: uploads/avatars
+    cv-dir: uploads/cv

@@ -125,4 +125,12 @@ public class OrganizationServiceImpl implements OrganizationService {
     public Boolean existsById(Long id) {
         return organizationRepository.existsById(id);
     }
+
+    @Override
+    public String getNameById(Long id) {
+        return organizationRepository.findById(id)
+                .map(Organization::getName)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Organization not found with id " + id));
+    }
 }

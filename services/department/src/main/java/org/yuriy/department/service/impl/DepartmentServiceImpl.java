@@ -23,7 +23,6 @@ import org.yuriy.department.service.DepartmentService;
 import org.yuriy.department.service.EmployeeClient;
 import org.yuriy.department.service.OrganizationClient;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -90,7 +89,7 @@ public class DepartmentServiceImpl implements DepartmentService {
         var d = departmentMapper.toEntity(req);
         departmentRepository.save(d);
         departmentEventProducer.sendDepartmentCreated(
-                new DepartmentCreatedEvent(d.getId(), d.getOrgId(), d.getName(), d.getParent().getId(),
+                new DepartmentCreatedEvent(d.getId(), d.getOrgId(), d.getName(),
                         d.getManagerId()));
         return departmentMapper.toResponse(d);
     }
@@ -124,8 +123,15 @@ public class DepartmentServiceImpl implements DepartmentService {
         departmentRepository.deleteById(id);
         departmentEventProducer.sendDepartmentDeleted(
                 new DepartmentDeletedEvent(department.getId(), department.getOrgId(), department.getName(),
-                        department.getParent().getId(),
                         department.getManagerId()));
+    }
+
+    @Override
+    public String getNameById(Long id) {
+        return departmentRepository.findById(id)
+                .map(Department::getName)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Department not found with id " + id));
     }
 
 }

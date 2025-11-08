@@ -1,17 +1,20 @@
 package org.yuriy.hrms.dto.mapper;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.yuriy.hrms.dto.request.EmployeeCreateRequest;
 import org.yuriy.hrms.dto.request.EmployeePatchRequest;
+import org.yuriy.hrms.dto.response.EmployeeFullResponse;
 import org.yuriy.hrms.dto.response.EmployeeResponse;
 import org.yuriy.hrms.entity.Employee;
 import org.yuriy.hrms.service.KeycloakUserService;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -19,6 +22,7 @@ import java.util.List;
 public class EmployeeMapper {
 
     private final KeycloakUserService keycloakUserService;
+    private final ObjectMapper objectMapper;
 
     public Employee toEntity(EmployeeCreateRequest r) {
         return Employee.builder().orgId(r.orgId()).deptId(r.deptId()).position(r.position())
@@ -47,6 +51,8 @@ public class EmployeeMapper {
             e.setManagerId(r.managerId());
         if (r.hrId() != null)
             e.setHrId(r.hrId());
+        if (r.orgId() != null)
+            e.setOrgId(r.orgId());
         if (r.gender() != null)
             e.setGender(r.gender());
         if (r.maritalStatus() != null)
@@ -101,5 +107,42 @@ public class EmployeeMapper {
                 e.getStatus(), e.getGender(), e.getMaritalStatus(), e.getTaxNumber(), e.getAbout(),
                 e.getOfficeLocation(), e.getBirthDate(), e.getAge(), e.getHiredAt(), e.getTerminatedAt(),
                 e.getAvatarUrl(), e.getCvKey());
+    }
+
+    public EmployeeFullResponse toResponse(Employee e,
+            String departmentName,
+            String organizationName,
+            Employee manager,
+            Employee hr) {
+        return new EmployeeFullResponse(
+                e.getId(),
+                e.getUserId(),
+                e.getEmail(),
+                e.getFirstName(),
+                e.getLastName(),
+                e.getPosition(),
+                e.getPhone(),
+                EmployeeFullResponse.Status.valueOf(e.getStatus().name()),
+                e.getGender() != null ? EmployeeFullResponse.Gender.valueOf(e.getGender().name()) : null,
+                e.getMaritalStatus() != null ? EmployeeFullResponse.MaritalStatus.valueOf(e.getMaritalStatus().name()) : null,
+                e.getTaxNumber(),
+                e.getAbout(),
+                e.getOfficeLocation(),
+                e.getBirthDate(),
+                e.getAge(),
+                e.getHiredAt(),
+                e.getTerminatedAt(),
+                e.getAvatarUrl(),
+                e.getCvKey(),
+                e.getDeptId() != null ? new EmployeeFullResponse.DepartmentInfo(e.getDeptId(), departmentName) : null,
+                manager != null ? new EmployeeFullResponse.EmployeeShortInfo(manager.getId(), manager.getFirstName(), manager.getLastName(), manager.getEmail()) : null,
+                hr != null ? new EmployeeFullResponse.EmployeeShortInfo(hr.getId(), hr.getFirstName(), hr.getLastName(), hr.getEmail()) : null,
+                e.getOrgId() != null ? new EmployeeFullResponse.OrganizationInfo(e.getOrgId(), organizationName) : null,
+                Optional.ofNullable(e.getLanguagesJson()).orElse(objectMapper.createArrayNode()),
+                Optional.ofNullable(e.getAddressJson()).orElse(objectMapper.createObjectNode()),
+                Optional.ofNullable(e.getEducationJson()).orElse(objectMapper.createArrayNode()),
+                Optional.ofNullable(e.getWorkExperienceJson()).orElse(objectMapper.createArrayNode()),
+                Optional.ofNullable(e.getProfileJson()).orElse(objectMapper.createObjectNode())
+        );
     }
 }

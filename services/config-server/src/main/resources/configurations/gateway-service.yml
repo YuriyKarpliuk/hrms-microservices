@@ -17,6 +17,10 @@ spring:
               uri: lb://EMPLOYEE-SERVICE
               predicates:
                 - Path=/api/v1/employees/**
+            - id: static-avatars
+              uri: http://localhost:8050
+              predicates:
+                - Path=/uploads/**
             - id: department-service
               uri: lb://DEPARTMENT-SERVICE
               predicates:

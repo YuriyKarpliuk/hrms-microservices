@@ -24,4 +24,6 @@ public interface DepartmentService {
     DepartmentResponse partialUpdateDepartment(Long id, DepartmentPatchRequest req);
 
     void deleteDepartment(Long id);
+
+    String getNameById(Long id);
 }

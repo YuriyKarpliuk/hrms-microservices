@@ -91,16 +91,16 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
     }
 
     private void sendPasswordSetupEmail(String userId, String accessToken) {
-        String url = keycloakUrl + "/admin/realms/" + realm + "/users/" + userId + "/execute-actions-email";
-
-        webClient.put()
-                .uri(url + "?lifespan=3600&redirect_uri=http://localhost:8222&client_id=hrms-rest-api")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(List.of("UPDATE_PASSWORD"))
-                .retrieve()
-                .toBodilessEntity()
-                .block();
+//        String url = keycloakUrl + "/admin/realms/" + realm + "/users/" + userId + "/execute-actions-email";
+//
+//        webClient.put()
+//                .uri(url + "?lifespan=3600&redirect_uri=http://localhost:8222&client_id=hrms-rest-api")
+//                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+//                .contentType(MediaType.APPLICATION_JSON)
+//                .bodyValue(List.of("UPDATE_PASSWORD"))
+//                .retrieve()
+//                .toBodilessEntity()
+//                .block();
 
     }
 

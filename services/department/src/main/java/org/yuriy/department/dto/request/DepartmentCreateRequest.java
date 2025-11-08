@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 
 public record DepartmentCreateRequest(@NotNull Long orgId,
         @NotBlank String name,
-        @NotNull Long parentId,
+        Long parentId,
         @NotNull Long managerId) {
 }
 

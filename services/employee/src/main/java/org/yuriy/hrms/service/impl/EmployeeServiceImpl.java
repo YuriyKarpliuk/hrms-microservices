@@ -3,16 +3,22 @@ package org.yuriy.hrms.service.impl;
 import io.micrometer.common.util.StringUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.yuriy.hrms.configuration.AppProperties;
 import org.yuriy.hrms.dto.mapper.EmployeeMapper;
 import org.yuriy.hrms.dto.request.EmployeeCreateRequest;
 import org.yuriy.hrms.dto.request.EmployeePatchRequest;
 import org.yuriy.hrms.dto.request.EmployeeSearchRequest;
 import org.yuriy.hrms.dto.response.EmployeeBasicResponse;
+import org.yuriy.hrms.dto.response.EmployeeFullResponse;
 import org.yuriy.hrms.dto.response.EmployeeResponse;
 import org.yuriy.hrms.entity.Employee;
 import org.yuriy.hrms.entity.Employee.Status;
@@ -23,12 +29,23 @@ import org.yuriy.hrms.kafka.EmployeeEventProducer;
 import org.yuriy.hrms.kafka.EmployeeUpdatedEvent;
 import org.yuriy.hrms.repository.EmployeeRepository;
 import org.yuriy.hrms.repository.specification.EmployeeSpecification;
+import org.yuriy.hrms.service.DepartmentClient;
 import org.yuriy.hrms.service.EmployeeService;
 import org.yuriy.hrms.service.KeycloakUserService;
+import org.yuriy.hrms.service.OrganizationClient;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
@@ -39,6 +56,10 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeMapper employeeMapper;
     private final KeycloakUserService keycloakUserService;
     private final EmployeeEventProducer employeeEventProducer;
+    private final AppProperties appProperties;
+    private final OrganizationClient organizationClient;
+    private final DepartmentClient departmentClient;
+
 
     @Override
     public Page<EmployeeResponse> searchEmployees(EmployeeSearchRequest request, Pageable pageable) {
@@ -231,6 +252,109 @@ public class EmployeeServiceImpl implements EmployeeService {
                 })
                 .orElseThrow(() -> new EntityNotFoundException("Employee not found with id " + id));
     }
+
+    @Override
+    public EmployeeFullResponse getByEmail(String email) {
+        Employee employee = employeeRepository.findEmployeeByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found for email: " + email));
+
+        String deptName = departmentClient.getNameById(employee.getDeptId());
+        String orgName = organizationClient.getNameById(employee.getOrgId());
+
+        Employee manager = employeeRepository.findById(employee.getManagerId()).orElse(null);
+        Employee hr = employeeRepository.findById(employee.getHrId()).orElse(null);
+
+        return employeeMapper.toResponse(employee, deptName, orgName, manager, hr);
+    }
+
+    @Override
+    @Transactional
+    public EmployeeResponse uploadAvatar(Long id, MultipartFile file) {
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id " + id));
+
+        try {
+            Path uploadDir = Paths.get(appProperties.getUpload().getAvatarDir());
+            Files.createDirectories(uploadDir);
+
+            String extension = getFileExtension(file.getOriginalFilename());
+            String hashName = DigestUtils.sha256Hex(UUID.randomUUID() + "_" + file.getOriginalFilename());
+            String fileName = hashName + (extension != null ? "." + extension : "");
+
+            Path filePath = uploadDir.resolve(fileName);
+            Files.write(filePath, file.getBytes());
+
+            if (employee.getAvatarUrl() != null && employee.getAvatarUrl().contains("/uploads/avatars/")) {
+                String oldFileName = employee.getAvatarUrl().substring(employee.getAvatarUrl().lastIndexOf("/") + 1);
+                Path oldFilePath = uploadDir.resolve(oldFileName);
+                Files.deleteIfExists(oldFilePath);
+            }
+
+            String avatarUrl = appProperties.getBaseUrl() + "/uploads/avatars/" + fileName;
+
+            employee.setAvatarUrl(avatarUrl);
+            employeeRepository.save(employee);
+
+            return employeeMapper.toResponse(employee);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to upload avatar: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public EmployeeFullResponse uploadCv(Long id, MultipartFile file) throws IOException {
+        if (!Objects.requireNonNull(file.getOriginalFilename()).endsWith(".pdf"))
+            throw new IllegalArgumentException("Only PDF files are allowed.");
+
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+
+        Path uploadDir = Paths.get(appProperties.getUpload().getCvDir());
+        Files.createDirectories(uploadDir);
+
+        String fileName = DigestUtils.sha256Hex(UUID.randomUUID() + "_" + file.getOriginalFilename()) + ".pdf";
+        Path filePath = uploadDir.resolve(fileName);
+        Files.write(filePath, file.getBytes());
+
+        String cvUrl = appProperties.getBaseUrl() + "/uploads/cv/" + fileName;
+        employee.setCvKey(cvUrl);
+
+        employeeRepository.save(employee);
+        return employeeMapper.toResponse(employee, null, null, null, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Resource downloadCv(Long id) throws FileNotFoundException, MalformedURLException {
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id " + id));
+
+        String cvKey = employee.getCvKey();
+        if (cvKey == null || cvKey.isBlank()) {
+            throw new FileNotFoundException("CV not uploaded");
+        }
+
+        String fileName = Paths.get(URI.create(cvKey).getPath()).getFileName().toString();
+
+        Path filePath = Paths.get(appProperties.getUpload().getCvDir()).resolve(fileName);
+        Resource resource = new UrlResource(filePath.toUri());
+
+        if (!resource.exists()) {
+            throw new FileNotFoundException("CV file not found at path: " + filePath);
+        }
+
+        return resource;
+    }
+
+
+
+    private String getFileExtension(String fileName) {
+        if (fileName == null || !fileName.contains(".")) return null;
+        return fileName.substring(fileName.lastIndexOf('.') + 1);
+    }
+
+
 
     private void validateEmployment(Employee e) {
         if (e.getStatus() == Status.TERMINATED && e.getTerminatedAt() == null) {
