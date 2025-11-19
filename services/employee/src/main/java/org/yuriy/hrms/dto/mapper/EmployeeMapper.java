@@ -71,6 +71,11 @@ public class EmployeeMapper {
             e.setTerminatedAt(r.terminatedAt());
         if (r.avatarUrl() != null)
             e.setAvatarUrl(r.avatarUrl());
+        if (r.languagesJson() != null) e.setLanguagesJson(r.languagesJson());
+        if (r.addressJson() != null) e.setAddressJson(r.addressJson());
+        if (r.educationJson() != null) e.setEducationJson(r.educationJson());
+        if (r.workExperienceJson() != null) e.setWorkExperienceJson(r.workExperienceJson());
+        if (r.profileJson() != null) e.setProfileJson(r.profileJson());
     }
 
     public void applyPut(Employee e, EmployeeCreateRequest r) {
@@ -102,11 +107,35 @@ public class EmployeeMapper {
                 log.warn("User {} not found in Keycloak", e.getUserId());
             }
         }
-        return new EmployeeResponse(e.getId(), e.getOrgId(), e.getUserId(), e.getDeptId(), e.getPosition(),
-                e.getManagerId(), e.getHrId(), e.getEmail(), roles, e.getFirstName(), e.getLastName(), e.getPhone(),
-                e.getStatus(), e.getGender(), e.getMaritalStatus(), e.getTaxNumber(), e.getAbout(),
-                e.getOfficeLocation(), e.getBirthDate(), e.getAge(), e.getHiredAt(), e.getTerminatedAt(),
-                e.getAvatarUrl(), e.getCvKey());
+        return new EmployeeResponse(
+                e.getId(),
+                e.getOrgId(),
+                null,
+                e.getDeptId(),
+                null,
+                e.getPosition(),
+                e.getManagerId(),
+                null,
+                e.getHrId(),
+                null,
+                e.getEmail(),
+                roles,
+                e.getFirstName(),
+                e.getLastName(),
+                e.getPhone(),
+                e.getStatus(),
+                e.getGender(),
+                e.getMaritalStatus(),
+                e.getTaxNumber(),
+                e.getAbout(),
+                e.getOfficeLocation(),
+                e.getBirthDate(),
+                e.getAge(),
+                e.getHiredAt(),
+                e.getTerminatedAt(),
+                e.getAvatarUrl(),
+                e.getCvKey()
+        );
     }
 
     public EmployeeFullResponse toResponse(Employee e,
@@ -145,4 +174,49 @@ public class EmployeeMapper {
                 Optional.ofNullable(e.getProfileJson()).orElse(objectMapper.createObjectNode())
         );
     }
+    public EmployeeResponse toDetailedResponse(Employee e,
+            String organizationName,
+            String departmentName,
+            String managerFullName,
+            String hrFullName) {
+        List<String> roles = Collections.emptyList();
+        if (e.getUserId() != null) {
+            try {
+                roles = keycloakUserService.getUserRoles(e.getUserId());
+            } catch (WebClientResponseException.NotFound ex) {
+                log.warn("User {} not found in Keycloak", e.getUserId());
+            }
+        }
+
+        return new EmployeeResponse(
+                e.getId(),
+                e.getOrgId(),
+                organizationName,
+                e.getDeptId(),
+                departmentName,
+                e.getPosition(),
+                e.getManagerId(),
+                managerFullName,
+                e.getHrId(),
+                hrFullName,
+                e.getEmail(),
+                roles,
+                e.getFirstName(),
+                e.getLastName(),
+                e.getPhone(),
+                e.getStatus(),
+                e.getGender(),
+                e.getMaritalStatus(),
+                e.getTaxNumber(),
+                e.getAbout(),
+                e.getOfficeLocation(),
+                e.getBirthDate(),
+                e.getAge(),
+                e.getHiredAt(),
+                e.getTerminatedAt(),
+                e.getAvatarUrl(),
+                e.getCvKey()
+        );
+    }
+
 }

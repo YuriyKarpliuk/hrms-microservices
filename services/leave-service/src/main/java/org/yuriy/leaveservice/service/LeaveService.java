@@ -6,6 +6,8 @@ import org.springframework.data.domain.Pageable;
 import org.yuriy.leaveservice.dto.request.LeaveCreateRequest;
 import org.yuriy.leaveservice.dto.request.LeaveSearchRequest;
 import org.yuriy.leaveservice.dto.response.LeaveResponse;
+import org.yuriy.leaveservice.dto.response.LeaveSummaryResponse;
+import org.yuriy.leaveservice.dto.response.LeaveUpcomingResponse;
 
 import java.util.List;
 
@@ -20,4 +22,12 @@ public interface LeaveService {
     LeaveResponse rejectLeave(Long leaveId, Long managerId);
 
     Page<LeaveResponse> searchLeaves(LeaveSearchRequest request, Pageable pageable);
+
+    List<LeaveSummaryResponse> getLeaveSummary(Long employeeId);
+
+    Double getRemainingDays(Long employeeId);
+
+    List<LeaveUpcomingResponse> getUpcomingLeaves(Long employeeId);
+
+    Page<LeaveResponse> searchLeavesForManager(LeaveSearchRequest request, Pageable pageable);
 }

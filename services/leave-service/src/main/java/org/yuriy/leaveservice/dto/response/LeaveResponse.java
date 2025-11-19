@@ -8,6 +8,8 @@ import java.time.LocalDate;
 
 public record LeaveResponse(Long id,
         Long employeeId,
+        String employeeFirstName,
+        String employeeLastName,
         LeaveType type,
         LocalDate startDate,
         LocalDate endDate,

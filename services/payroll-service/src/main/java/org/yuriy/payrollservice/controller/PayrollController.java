@@ -4,6 +4,7 @@ package org.yuriy.payrollservice.controller;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -12,8 +13,10 @@ import org.yuriy.payrollservice.dto.request.PayrollCreateRequest;
 import org.yuriy.payrollservice.dto.request.PayrollSearchRequest;
 import org.yuriy.payrollservice.dto.response.PayrollResponse;
 import org.yuriy.payrollservice.dto.response.PayrollWithEmployeeResponse;
+import org.yuriy.payrollservice.entity.PayrollStatus;
 import org.yuriy.payrollservice.service.PayrollService;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -55,8 +58,7 @@ public class PayrollController {
         return ResponseEntity.ok(payrollService.markAsFailed(id));
     }
 
-    @GetMapping("/search")
-    @PreAuthorize("hasAnyRole('ADMIN','HR')")
+    @PostMapping("/search")
     public ResponseEntity<Page<PayrollResponse>> searchPayrolls(
             @RequestBody PayrollSearchRequest request,
             @PageableDefault(sort = "employeeId") Pageable pageable) {
@@ -64,9 +66,33 @@ public class PayrollController {
     }
 
     @GetMapping("/employee/{employeeId}")
-    @PreAuthorize("hasAnyRole('ADMIN','HR') or #employeeId == authentication.principal.claims['employeeId']")
+    @PreAuthorize("hasAnyRole('ADMIN','HR') or @employeeSecurity.isOwner(authentication)")
     public ResponseEntity<List<PayrollResponse>> getPayrollsByEmployee(@PathVariable Long employeeId) {
         return ResponseEntity.ok(payrollService.getPayrollsByEmployee(employeeId));
     }
 
+    @GetMapping("/team")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<Page<PayrollResponse>> getTeamPayrolls(
+            @RequestParam Long managerId,
+            @RequestParam(required = false) Long employeeId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endTo,
+            @RequestParam(required = false) String employeeName,
+            @PageableDefault Pageable pageable) {
+
+        PayrollSearchRequest request = new PayrollSearchRequest(
+                employeeId,
+                startFrom,
+                endTo,
+                status != null ? PayrollStatus.valueOf(status) : null,
+                null,
+                null,
+                managerId,
+                employeeName
+        );
+
+        return ResponseEntity.ok(payrollService.searchPayrollsForManager(managerId, request, pageable));
+    }
 }

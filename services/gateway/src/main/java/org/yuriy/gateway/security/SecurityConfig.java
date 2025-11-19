@@ -21,7 +21,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchange -> exchange
-                        .pathMatchers("/eureka/**", "/uploads/**")
+                        .pathMatchers("/eureka/**", "/uploads/**", "/ws-notifications/**")
                         .permitAll()
                         .anyExchange()
                         .authenticated())

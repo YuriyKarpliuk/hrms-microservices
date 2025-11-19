@@ -1,6 +1,7 @@
 package org.yuriy.hrms.service;
 
 import java.util.List;
+import java.util.Map;
 
 public interface KeycloakUserService {
     String createUser(String email, String firstName, String lastName, String roleName);
@@ -10,4 +11,6 @@ public interface KeycloakUserService {
     void updateUser(String userId, String username, String email, String firstName, String lastName);
 
     List<String> getUserRoles(String userId);
+
+    List<Map> getAllUsers();
 }

@@ -131,4 +131,13 @@ public class EmployeeSpecification {
         return (root, query, cb) ->
                 phone == null ? cb.conjunction() : cb.equal(root.get("phone"), phone);
     }
+
+    public static Specification<Employee> hasOrgId(Long orgId) {
+        return (root, query, cb) -> cb.equal(root.get("orgId"), orgId);
+    }
+    public static Specification<Employee> excludeEmployeeId(Long employeeId) {
+        return (root, query, cb) ->
+                cb.notEqual(root.get("id"), employeeId);
+    }
+
 }

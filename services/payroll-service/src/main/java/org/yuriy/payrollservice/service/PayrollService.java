@@ -28,4 +28,6 @@ public interface PayrollService {
     List<PayrollResponse> getPayrollsByEmployee(Long employeeId);
 
     void applyLeaveToPayroll(Long employeeId, LocalDate startDate, LocalDate endDate, String type);
+
+    Page<PayrollResponse> searchPayrollsForManager(Long managerId, PayrollSearchRequest request, Pageable pageable);
 }

@@ -17,9 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.yuriy.hrms.dto.request.EmployeeCreateRequest;
 import org.yuriy.hrms.dto.request.EmployeePatchRequest;
 import org.yuriy.hrms.dto.request.EmployeeSearchRequest;
-import org.yuriy.hrms.dto.response.EmployeeBasicResponse;
-import org.yuriy.hrms.dto.response.EmployeeFullResponse;
-import org.yuriy.hrms.dto.response.EmployeeResponse;
+import org.yuriy.hrms.dto.response.*;
 import org.yuriy.hrms.service.EmployeeService;
 
 import java.io.IOException;
@@ -34,6 +32,11 @@ public class EmployeeController {
 
     public EmployeeController(EmployeeService employeeService) {
         this.employeeService = employeeService;
+    }
+
+    @GetMapping("/managers")
+    public ResponseEntity<List<EmployeeBasicResponse>> getAllManagers() {
+        return ResponseEntity.ok(employeeService.getManagers());
     }
 
     @GetMapping
@@ -102,11 +105,12 @@ public class EmployeeController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/search")
+    @PostMapping("/search/{employeeId}")
     public ResponseEntity<Page<EmployeeResponse>> searchEmployees(
+            @PathVariable Long employeeId,
             @RequestBody EmployeeSearchRequest request,
             @PageableDefault(sort = "email") Pageable pageable) {
-        return ResponseEntity.ok(employeeService.searchEmployees(request, pageable));
+        return ResponseEntity.ok(employeeService.searchEmployees(employeeId, request, pageable));
     }
 
     @GetMapping("/{id}/exists")
@@ -118,5 +122,51 @@ public class EmployeeController {
     public ResponseEntity<EmployeeBasicResponse> getEmployeeBasicInfo(@PathVariable Long id) {
         return ResponseEntity.ok(employeeService.getBasicInfo(id));
     }
+
+    @GetMapping("/find-id-by-email")
+    public ResponseEntity<?> findEmployeeIdByEmail(@RequestParam String email) {
+        return employeeService.findEmployeeIdByEmail(email)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+
+    @GetMapping("/dashboard/{employeeId}")
+    @PreAuthorize("hasRole('USER') or @employeeSecurity.isOwner(authentication)")
+    public ResponseEntity<UserDashboardResponse> getUserDashboard(@PathVariable Long employeeId) {
+        return ResponseEntity.ok(employeeService.getDashboard(employeeId));
+    }
+
+    @GetMapping("/{managerId}/team")
+    public ResponseEntity<List<EmployeeBasicResponse>> getEmployeesByManager(
+            @PathVariable Long managerId
+    ) {
+        List<EmployeeBasicResponse> team = employeeService.getEmployeesByManager(managerId);
+        return ResponseEntity.ok(team);
+    }
+    @GetMapping("/manager/dashboard/{managerId}")
+    public ResponseEntity<ManagerDashboardResponse> getDashboard(@PathVariable Long managerId) {
+        return ResponseEntity.ok(employeeService.buildManagerDashboard(managerId));
+    }
+
+    @GetMapping("/organization/{orgId}")
+    public ResponseEntity<List<EmployeeResponse>> getEmployeesByOrganization(@PathVariable Long orgId) {
+        return ResponseEntity.ok(employeeService.getEmployeesByOrganization(orgId));
+    }
+
+    @GetMapping("/department/{departmentId}")
+    public ResponseEntity<List<EmployeeResponse>> getEmployeesByDepartment(@PathVariable Long departmentId) {
+        return ResponseEntity.ok(employeeService.getEmployeesByDepartment(departmentId));
+    }
+
+    @GetMapping("/org/{orgId}/birthdays/today")
+    public ResponseEntity<List<EmployeeResponse>> getTodayBirthdaysForOrg(
+            @PathVariable Long orgId
+    ) {
+        return ResponseEntity.ok(employeeService.getTodayBirthdaysForOrg(orgId));
+    }
+
+
+
 
 }

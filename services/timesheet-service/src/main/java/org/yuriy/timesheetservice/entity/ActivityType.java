@@ -7,5 +7,4 @@ public enum ActivityType {
     SICK,
     UNPAID,
     TRAINING,
-    BUSINESS_TRIP
 }

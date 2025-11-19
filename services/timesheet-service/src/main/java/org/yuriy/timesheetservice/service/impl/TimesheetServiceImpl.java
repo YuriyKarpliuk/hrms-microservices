@@ -9,20 +9,25 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.yuriy.timesheetservice.dto.mapper.TimesheetMapper;
 import org.yuriy.timesheetservice.dto.request.TimesheetCreateRequest;
+import org.yuriy.timesheetservice.dto.request.TimesheetEntryRequest;
 import org.yuriy.timesheetservice.dto.request.TimesheetSearchRequest;
 import org.yuriy.timesheetservice.dto.response.EmployeeBasicResponse;
+import org.yuriy.timesheetservice.dto.response.TimesheetEntryResponse;
 import org.yuriy.timesheetservice.dto.response.TimesheetResponse;
+import org.yuriy.timesheetservice.dto.response.TimesheetSummaryResponse;
 import org.yuriy.timesheetservice.entity.Timesheet;
 import org.yuriy.timesheetservice.entity.ActivityType;
 import org.yuriy.timesheetservice.entity.TimesheetEntry;
 import org.yuriy.timesheetservice.entity.TimesheetStatus;
 import org.yuriy.timesheetservice.kafka.TimesheetApprovedEvent;
 import org.yuriy.timesheetservice.kafka.TimesheetEventProducer;
+import org.yuriy.timesheetservice.repository.TimesheetEntryRepository;
 import org.yuriy.timesheetservice.repository.TimesheetRepository;
 import org.yuriy.timesheetservice.repository.specification.TimesheetSpecification;
 import org.yuriy.timesheetservice.service.EmployeeClient;
 import org.yuriy.timesheetservice.service.TimesheetService;
 
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -35,6 +40,7 @@ import java.util.List;
 public class TimesheetServiceImpl implements TimesheetService {
 
     private final TimesheetRepository timesheetRepository;
+    private final TimesheetEntryRepository timesheetEntryRepository;
     private final TimesheetMapper timesheetMapper;
     private final EmployeeClient employeeClient;
     private final TimesheetEventProducer timesheetEventProducer;
@@ -71,15 +77,13 @@ public class TimesheetServiceImpl implements TimesheetService {
                     request.employeeId()
             ));
         }
-
-        if (request.startDateFrom() != null || request.startDateTo() != null) {
-            specifications.add(TimesheetSpecification.startDateBetween(request.startDateFrom(), request.startDateTo()));
+        if (request.weekStartFrom() != null)
+            specifications.add(TimesheetSpecification.startAfterOrEqual(request.weekStartFrom()));
+        if (request.weekEndTo() != null)
+            specifications.add(TimesheetSpecification.endBeforeOrEqual(request.weekEndTo()));
+        if (request.status() != null) {
+            specifications.add(TimesheetSpecification.hasStatus(request.status()));
         }
-
-        if (request.endDateFrom() != null || request.endDateTo() != null) {
-            specifications.add(TimesheetSpecification.endDateBetween(request.endDateFrom(), request.endDateTo()));
-        }
-
 
         Specification<Timesheet> specification = Specification.allOf(specifications);
 
@@ -131,7 +135,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                             .employeeId(employeeId)
                             .weekStart(weekStart)
                             .weekEnd(weekEnd)
-                            .status(TimesheetStatus.DRAFT)
+                            .status(TimesheetStatus.SUBMITTED)
                             .entries(new ArrayList<>())
                             .build());
 
@@ -157,4 +161,84 @@ public class TimesheetServiceImpl implements TimesheetService {
             timesheetRepository.save(timesheet);
         }
     }
+    @Transactional
+    @Override
+    public List<TimesheetEntryResponse> saveEntries(Long timesheetId, List<TimesheetEntryRequest> entries) {
+        Timesheet timesheet = timesheetRepository.findById(timesheetId)
+                .orElseThrow(() -> new RuntimeException("Timesheet not found"));
+
+        // очистити старі записи
+        timesheet.getEntries().clear();
+
+        // створити нові
+        List<TimesheetEntry> newEntries = entries.stream()
+                .map(req -> TimesheetEntry.builder()
+                        .workDate(req.workDate())
+                        .project(req.project())
+                        .notes(req.notes())
+                        .hours(req.hours())
+                        .activityType(req.activityType())
+                        .timesheet(timesheet)
+                        .build())
+                .toList();
+
+        timesheet.getEntries().addAll(newEntries);
+
+        timesheetRepository.save(timesheet);
+
+        return newEntries.stream()
+                .map(entry -> new TimesheetEntryResponse(
+                        entry.getId(),
+                        entry.getWorkDate(),
+                        entry.getProject(),
+                        entry.getNotes(),
+                        entry.getHours(),
+                        entry.getActivityType()
+                ))
+                .toList();
+    }
+
+    @Transactional
+    @Override
+    public void deleteEntry(Long entryId) {
+        timesheetEntryRepository.deleteById(entryId);
+    }
+
+    @Override
+    public TimesheetSummaryResponse getWeeklySummary(Long employeeId) {
+        LocalDate monday = LocalDate.now().with(DayOfWeek.MONDAY);
+        LocalDate sunday = monday.plusDays(6);
+
+        BigDecimal totalHours = timesheetRepository.sumHoursForEmployeeInRange(employeeId, monday, sunday);
+        BigDecimal overtime = totalHours.subtract(BigDecimal.valueOf(40)).max(BigDecimal.ZERO);
+
+        return new TimesheetSummaryResponse(totalHours, overtime, totalHours);
+    }
+    @Override
+    public Page<TimesheetResponse> searchTimesheetsForManager(TimesheetSearchRequest req, Pageable pageable) {
+        List<EmployeeBasicResponse> team = employeeClient.getEmployeesByManager(req.managerId());
+
+        if (req.employeeName() != null && !req.employeeName().isBlank()) {
+            String query = req.employeeName().toLowerCase();
+            team = team.stream()
+                    .filter(e -> (e.firstName() + " " + e.lastName()).toLowerCase().contains(query))
+                    .toList();
+        }
+
+        List<Long> employeeIds = team.stream().map(EmployeeBasicResponse::id).toList();
+        if (employeeIds.isEmpty()) return Page.empty(pageable);
+
+        List<Specification<Timesheet>> specs = new ArrayList<>();
+        specs.add(TimesheetSpecification.employeeIn(employeeIds));
+
+        if (req.status() != null) specs.add(TimesheetSpecification.hasStatus(req.status()));
+        if (req.weekStartFrom() != null)
+            specs.add(TimesheetSpecification.startAfterOrEqual(req.weekStartFrom()));
+        if (req.weekEndTo() != null)
+            specs.add(TimesheetSpecification.endBeforeOrEqual(req.weekEndTo()));
+        Specification<Timesheet> spec = Specification.allOf(specs);
+        return timesheetRepository.findAll(spec, pageable).map(timesheetMapper::toResponse);
+    }
+
+
 }

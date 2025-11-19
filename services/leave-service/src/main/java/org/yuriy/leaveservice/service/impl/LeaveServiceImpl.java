@@ -11,8 +11,11 @@ import org.yuriy.leaveservice.dto.request.LeaveCreateRequest;
 import org.yuriy.leaveservice.dto.request.LeaveSearchRequest;
 import org.yuriy.leaveservice.dto.response.EmployeeBasicResponse;
 import org.yuriy.leaveservice.dto.response.LeaveResponse;
+import org.yuriy.leaveservice.dto.response.LeaveSummaryResponse;
+import org.yuriy.leaveservice.dto.response.LeaveUpcomingResponse;
 import org.yuriy.leaveservice.entity.Leave;
 import org.yuriy.leaveservice.entity.LeaveStatus;
+import org.yuriy.leaveservice.entity.LeaveType;
 import org.yuriy.leaveservice.kafka.LeaveApprovedEvent;
 import org.yuriy.leaveservice.kafka.LeaveEventProducer;
 import org.yuriy.leaveservice.kafka.LeaveRejectedEvent;
@@ -22,8 +25,11 @@ import org.yuriy.leaveservice.repository.specification.LeaveSpecification;
 import org.yuriy.leaveservice.service.EmployeeClient;
 import org.yuriy.leaveservice.service.LeaveService;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDate;
+import java.time.Year;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -134,5 +140,89 @@ public class LeaveServiceImpl implements LeaveService {
         return leaveRepository.findAll(specification, pageable)
                 .map(leaveMapper::toResponse);
     }
+
+    @Override
+    public List<LeaveSummaryResponse> getLeaveSummary(Long employeeId) {
+        Map<LeaveType, Long> usedDays = leaveRepository.findByEmployeeId(employeeId).stream()
+                .filter(l -> l.getStatus() == LeaveStatus.APPROVED)
+                .collect(Collectors.groupingBy(
+                        Leave::getType,
+                        Collectors.summingLong(l ->
+                                ChronoUnit.DAYS.between(l.getStartDate(), l.getEndDate()) + 1)
+                ));
+
+        Map<LeaveType, Long> totalDays = Map.of(
+                LeaveType.VACATION, 20L,
+                LeaveType.SICK, 10L,
+                LeaveType.UNPAID, 10L
+        );
+
+        return Arrays.stream(LeaveType.values())
+                .map(type -> {
+                    long total = totalDays.getOrDefault(type, 0L);
+                    long used = usedDays.getOrDefault(type, 0L);
+                    return new LeaveSummaryResponse(
+                            type.name(),
+                            total,
+                            used
+                    );
+                })
+                .sorted(Comparator.comparing(LeaveSummaryResponse::type)) // для стабільного порядку
+                .toList();
+    }
+
+
+
+    @Override
+    public Double getRemainingDays(Long employeeId) {
+        int total = 20;
+        int used = leaveRepository.countUsedVacationDays(employeeId, Year.now().getValue());
+        return (double) (total - used);
+    }
+
+    @Override
+    public List<LeaveUpcomingResponse> getUpcomingLeaves(Long employeeId) {
+        LocalDate today = LocalDate.now();
+        return leaveRepository.findByEmployeeIdAndStartDateAfter(employeeId, today)
+                .stream()
+                .map(l -> new LeaveUpcomingResponse(l.getStartDate(), l.getEndDate(), l.getType().name()))
+                .toList();
+    }
+
+    @Override
+    public Page<LeaveResponse> searchLeavesForManager(LeaveSearchRequest request, Pageable pageable) {
+        List<EmployeeBasicResponse> team = employeeClient.getEmployeesByManager(request.managerId());
+
+        if (request.employeeName() != null && !request.employeeName().isBlank()) {
+            String query = request.employeeName().toLowerCase();
+            team = team.stream()
+                    .filter(e -> (e.firstName() + " " + e.lastName()).toLowerCase().contains(query))
+                    .toList();
+        }
+
+        List<Long> employeeIds = team.stream()
+                .map(EmployeeBasicResponse::id)
+                .toList();
+
+        if (employeeIds.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        List<Specification<Leave>> specs = new ArrayList<>();
+        specs.add(LeaveSpecification.employeeIn(employeeIds));
+
+        if (request.status() != null) specs.add(LeaveSpecification.hasStatus(request.status()));
+        if (request.type() != null) specs.add(LeaveSpecification.hasType(request.type()));
+        if (request.startFrom() != null)
+            specs.add(LeaveSpecification.startAfterOrEqual(request.startFrom()));
+        if (request.endTo() != null)
+            specs.add(LeaveSpecification.endBeforeOrEqual(request.endTo()));
+        Specification<Leave> spec = Specification.allOf(specs);
+
+        return leaveRepository.findAll(spec, pageable)
+                .map(leaveMapper::toResponse);
+    }
+
+
 
 }

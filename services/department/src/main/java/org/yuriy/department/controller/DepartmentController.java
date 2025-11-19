@@ -13,6 +13,7 @@ import org.yuriy.department.dto.request.DepartmentCreateRequest;
 import org.yuriy.department.dto.request.DepartmentPatchRequest;
 import org.yuriy.department.dto.request.DepartmentSearchRequest;
 import org.yuriy.department.dto.response.DepartmentResponse;
+import org.yuriy.department.dto.response.PageResponse;
 import org.yuriy.department.service.DepartmentService;
 
 import java.util.List;
@@ -69,5 +70,25 @@ public class DepartmentController {
             @RequestBody DepartmentSearchRequest request,
             @PageableDefault(sort = "name") Pageable pageable) {
         return ResponseEntity.ok(departmentService.searchDepartments(request, pageable));
+    }
+
+    @GetMapping("/organization/{orgId}")
+    public ResponseEntity<List<DepartmentResponse>> getDepartmentsByOrganization(@PathVariable Long orgId) {
+        return ResponseEntity.ok(departmentService.getDepartmentsByOrganization(orgId));
+    }
+
+    @PostMapping("/search/new")
+    public PageResponse<DepartmentResponse> search(
+            @RequestBody DepartmentSearchRequest request,
+            @PageableDefault(sort = "name") Pageable pageable) {
+        Page<DepartmentResponse> page = departmentService.searchDepartments(request, pageable);
+        return new PageResponse<>(
+                page.getContent(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.isLast()
+        );
     }
 }

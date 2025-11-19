@@ -10,21 +10,19 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.yuriy.notificationservice.service.BirthdayNotificationService;
+import org.yuriy.notificationservice.service.ServiceTokenProvider;
 
 @Configuration
 @RequiredArgsConstructor
 public class FeignClientInterceptor implements RequestInterceptor {
 
-    private final JwtDecoder jwtDecoder;
+    private final ServiceTokenProvider tokenProvider;
 
     @Override
     public void apply(RequestTemplate template) {
-        SecurityContext context = SecurityContextHolder.getContext();
-        Authentication authentication = context.getAuthentication();
-        if (authentication instanceof JwtAuthenticationToken jwtAuth) {
-            String token = jwtAuth.getToken().getTokenValue();
-            template.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
-        }
+        String token = tokenProvider.getToken();
+        template.header("Authorization", "Bearer " + token);
     }
 }
 

@@ -170,6 +170,42 @@ public class PayrollServiceImpl implements PayrollService {
                 }, () -> log.warn("No payroll found for employee {} covering {} - {}", employeeId, startDate, endDate));
     }
 
+    @Override
+    public Page<PayrollResponse> searchPayrollsForManager(Long managerId, PayrollSearchRequest req, Pageable pageable) {
+        List<EmployeeBasicResponse> team = employeeClient.getEmployeesByManager(managerId);
+
+        if (req.employeeName() != null && !req.employeeName().isBlank()) {
+            String query = req.employeeName().toLowerCase();
+            team = team.stream()
+                    .filter(e -> (e.firstName() + " " + e.lastName()).toLowerCase().contains(query))
+                    .toList();
+        }
+
+        List<Long> employeeIds = team.stream().map(EmployeeBasicResponse::id).toList();
+        if (employeeIds.isEmpty()) return Page.empty(pageable);
+
+        List<Specification<Payroll>> specs = new ArrayList<>();
+        specs.add(PayrollSpecification.employeeIn(employeeIds));
+
+        if (req.employeeId() != null)
+            specs.add(PayrollSpecification.hasEmployee(req.employeeId()));
+
+        if (req.status() != null)
+            specs.add(PayrollSpecification.hasStatus(req.status()));
+
+        if (req.fromDate() != null || req.toDate() != null)
+            specs.add(PayrollSpecification.periodOverlaps(req.fromDate(), req.toDate()));
+
+        if (req.minAmount() != null || req.maxAmount() != null)
+            specs.add(PayrollSpecification.netSalaryBetween(req.minAmount(), req.maxAmount()));
+
+        Specification<Payroll> spec = Specification.allOf(specs);
+
+        return payrollRepository.findAll(spec, pageable).map(payrollMapper::toResponse);
+    }
+
+
+
     private BigDecimal calculateDeduction(String leaveType, BigDecimal dailyRate, long days) {
         return switch (leaveType.toUpperCase()) {
             case "UNPAID" -> dailyRate.multiply(BigDecimal.valueOf(days));

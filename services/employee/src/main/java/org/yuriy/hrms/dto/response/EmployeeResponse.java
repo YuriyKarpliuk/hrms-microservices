@@ -9,8 +9,32 @@ import java.time.LocalDate;
 import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record EmployeeResponse(Long id, Long orgId, String userId, Long deptId, String position, Long managerId,
-        Long hrId, String email, List<String> roles, String firstName, String lastName, String phone, Status status, Gender gender,
-        MaritalStatus maritalStatus, String taxNumber, String about, String officeLocation, LocalDate birthDate,
-        Integer age, LocalDate hiredAt, LocalDate terminatedAt, String avatarUrl, String cvKey) {
-}
+public record EmployeeResponse(
+        Long id,
+        Long orgId,
+        String organizationName,
+        Long deptId,
+        String departmentName,
+        String position,
+        Long managerId,
+        String managerFullName,
+        Long hrId,
+        String hrFullName,
+        String email,
+        List<String> roles,
+        String firstName,
+        String lastName,
+        String phone,
+        Status status,
+        Gender gender,
+        MaritalStatus maritalStatus,
+        String taxNumber,
+        String about,
+        String officeLocation,
+        LocalDate birthDate,
+        Integer age,
+        LocalDate hiredAt,
+        LocalDate terminatedAt,
+        String avatarUrl,
+        String cvKey
+) {}

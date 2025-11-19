@@ -14,6 +14,8 @@ public record PayrollResponse(
         BigDecimal bonus,
         BigDecimal deductions,
         BigDecimal netSalary,
-        PayrollStatus status
+        PayrollStatus status,
+        String employeeFirstName,
+        String employeeLastName
 ) {
 }

@@ -2,9 +2,11 @@ package org.yuriy.timesheetservice.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.yuriy.timesheetservice.entity.Timesheet;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -16,4 +18,8 @@ public interface TimesheetRepository
     List<Timesheet> findByEmployeeId(Long employeeId);
 
     Optional<Timesheet> findByEmployeeIdAndWeekStart(Long employeeId, LocalDate weekStart);
-}
+
+    @Query("SELECT COALESCE(SUM(t.hours), 0) FROM TimesheetEntry t " +
+            "WHERE t.timesheet.employeeId = :employeeId " +
+            "AND t.workDate BETWEEN :start AND :end")
+    BigDecimal sumHoursForEmployeeInRange(Long employeeId, LocalDate start, LocalDate end);}

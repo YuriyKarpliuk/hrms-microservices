@@ -42,9 +42,13 @@ public class DepartmentServiceImpl implements DepartmentService {
         List<Specification<Department>> specifications = new ArrayList<>();
 
         if (request.name() != null) {
-            specifications.add(DepartmentSpecification.nameMatches(
-                    request.name(), request.stringMatchType()
-            ));
+            DepartmentSpecification.StringMatchType type = request.stringMatchType() != null
+                    ? request.stringMatchType()
+                    : DepartmentSpecification.StringMatchType.CONTAINS;
+
+            specifications.add(
+                    DepartmentSpecification.nameMatches(request.name(), type)
+            );
         }
         if (request.managerId() != null) {
             specifications.add(DepartmentSpecification.hasManager(request.managerId()));
@@ -133,5 +137,14 @@ public class DepartmentServiceImpl implements DepartmentService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Department not found with id " + id));
     }
+
+    @Override
+    public List<DepartmentResponse> getDepartmentsByOrganization(Long orgId) {
+        return departmentRepository.findByOrgId(orgId)
+                .stream()
+                .map(departmentMapper::toResponse)
+                .toList();
+    }
+
 
 }

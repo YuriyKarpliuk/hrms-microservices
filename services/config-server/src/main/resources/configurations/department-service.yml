@@ -43,6 +43,3 @@ keycloak:
   realm: HRMS
   client-id: hrms-rest-api
   client-secret: ${KEYCLOAK_CLIENT_SECRET}
-application:
-  config:
-    organization-url: http://localhost:8222/api/v1/organizations

@@ -1,11 +1,14 @@
 package org.yuriy.timesheetservice.repository.specification;
 
 
+import org.bouncycastle.util.Times;
 import org.springframework.data.jpa.domain.Specification;
 import org.yuriy.timesheetservice.entity.Timesheet;
 import org.yuriy.timesheetservice.entity.TimesheetStatus;
 
+import java.sql.Time;
 import java.time.LocalDate;
+import java.util.List;
 
 public class TimesheetSpecification {
 
@@ -47,4 +50,20 @@ public class TimesheetSpecification {
                 status == null ? cb.conjunction() : cb.equal(root.get("status"), status);
     }
 
+    public static Specification<Timesheet> employeeIn(List<Long> employeeIds) {
+        return (root, query, cb) -> {
+            if (employeeIds == null || employeeIds.isEmpty()) return cb.disjunction();
+            return root.get("employeeId").in(employeeIds);
+        };
+    }
+
+    public static Specification<Timesheet> startAfterOrEqual(LocalDate date) {
+        return (root, query, cb) ->
+                cb.greaterThanOrEqualTo(root.get("weekStart"), date);
+    }
+
+    public static Specification<Timesheet> endBeforeOrEqual(LocalDate date) {
+        return (root, query, cb) ->
+                cb.lessThanOrEqualTo(root.get("weekEnd"), date);
+    }
 }

@@ -37,9 +37,13 @@ public class OrganizationServiceImpl implements OrganizationService {
         List<Specification<Organization>> specifications = new ArrayList<>();
 
         if (request.name() != null) {
-            specifications.add(OrganizationSpecification.nameMatches(
-                    request.name(), request.stringMatchType()
-            ));
+            OrganizationSpecification.StringMatchType type = request.stringMatchType() != null
+                    ? request.stringMatchType()
+                    : OrganizationSpecification.StringMatchType.CONTAINS;
+
+            specifications.add(
+                    OrganizationSpecification.nameMatches(request.name(), type)
+            );
         }
         if (request.currency() != null) {
             specifications.add(OrganizationSpecification.hasCurrency(request.currency()));

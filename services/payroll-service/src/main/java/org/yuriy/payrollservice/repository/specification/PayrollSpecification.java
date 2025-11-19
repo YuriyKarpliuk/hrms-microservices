@@ -7,6 +7,7 @@ import org.yuriy.payrollservice.entity.PayrollStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 public class PayrollSpecification {
 
@@ -51,4 +52,10 @@ public class PayrollSpecification {
         };
     }
 
+    public static Specification<Payroll> employeeIn(List<Long> employeeIds) {
+        return (root, query, cb) -> {
+            if (employeeIds == null || employeeIds.isEmpty()) return cb.disjunction();
+            return root.get("employeeId").in(employeeIds);
+        };
+    }
 }

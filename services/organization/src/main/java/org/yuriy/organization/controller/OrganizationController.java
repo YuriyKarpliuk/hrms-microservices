@@ -13,6 +13,7 @@ import org.yuriy.organization.dto.request.OrganizationCreateRequest;
 import org.yuriy.organization.dto.request.OrganizationPatchRequest;
 import org.yuriy.organization.dto.request.OrganizationSearchRequest;
 import org.yuriy.organization.dto.response.OrganizationResponse;
+import org.yuriy.organization.dto.response.PageResponse;
 import org.yuriy.organization.service.OrganizationService;
 
 import java.util.List;
@@ -78,4 +79,19 @@ public class OrganizationController {
     public ResponseEntity<Boolean> existsById(@PathVariable Long id) {
         return ResponseEntity.ok(organizationService.existsById(id));
     }
+    @PostMapping("/search/new")
+    public PageResponse<OrganizationResponse> search(@RequestBody OrganizationSearchRequest req,
+            Pageable pageable) {
+        Page<OrganizationResponse> page = organizationService.searchOrganizations(req, pageable);
+
+        return new PageResponse<>(
+                page.getContent(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.isLast()
+        );
+    }
+
 }

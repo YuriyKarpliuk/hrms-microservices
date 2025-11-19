@@ -26,4 +26,6 @@ public interface DepartmentService {
     void deleteDepartment(Long id);
 
     String getNameById(Long id);
+
+    List<DepartmentResponse> getDepartmentsByOrganization(Long orgId);
 }

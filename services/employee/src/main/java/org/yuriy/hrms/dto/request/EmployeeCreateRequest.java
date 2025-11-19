@@ -8,7 +8,7 @@ import org.yuriy.hrms.entity.Employee.Gender;
 
 import java.time.LocalDate;
 
-public record EmployeeCreateRequest(@NotNull Long orgId,
+    public record EmployeeCreateRequest(@NotNull Long orgId,
         Long deptId,
         String position,
         Long managerId,

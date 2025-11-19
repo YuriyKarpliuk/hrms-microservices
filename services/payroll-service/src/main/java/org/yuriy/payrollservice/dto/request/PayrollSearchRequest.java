@@ -10,6 +10,8 @@ public record PayrollSearchRequest(
         LocalDate toDate,
         PayrollStatus status,
         Double minAmount,
-        Double maxAmount
+        Double maxAmount,
+        Long managerId,
+        String employeeName
 ) {
 }

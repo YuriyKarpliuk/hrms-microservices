@@ -7,18 +7,17 @@ import org.springframework.web.multipart.MultipartFile;
 import org.yuriy.hrms.dto.request.EmployeeCreateRequest;
 import org.yuriy.hrms.dto.request.EmployeePatchRequest;
 import org.yuriy.hrms.dto.request.EmployeeSearchRequest;
-import org.yuriy.hrms.dto.response.EmployeeBasicResponse;
-import org.yuriy.hrms.dto.response.EmployeeFullResponse;
-import org.yuriy.hrms.dto.response.EmployeeResponse;
+import org.yuriy.hrms.dto.response.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.List;
+import java.util.Optional;
 
 public interface EmployeeService {
 
-    Page<EmployeeResponse> searchEmployees(EmployeeSearchRequest request, Pageable pageable);
+    Page<EmployeeResponse> searchEmployees(Long employeeId, EmployeeSearchRequest request, Pageable pageable);
 
     List<EmployeeResponse> getAllEmployees();
 
@@ -43,4 +42,26 @@ public interface EmployeeService {
     EmployeeFullResponse uploadCv(Long id, MultipartFile file) throws IOException;
 
     Resource downloadCv(Long id) throws FileNotFoundException, MalformedURLException;
+
+    Optional<Object> findEmployeeIdByEmail(String email);
+
+    UserDashboardResponse getDashboard(Long employeeId);
+
+    List<EmployeeBasicResponse> getEmployeesByManager(Long managerId);
+
+    ManagerDashboardResponse buildManagerDashboard(Long managerId);
+
+    List<EmployeeResponse> getEmployeesByOrganization(Long orgId);
+
+    List<EmployeeResponse> getEmployeesByDepartment(Long departmentId);
+
+    List<EmployeeResponse> getTodayBirthdaysForOrg(Long orgId);
+
+    List<EmployeeBasicResponse> getManagers();
+
+    long countEmployees();
+
+    List<Integer> getRoleDistribution();
+
+    int countCreatedOn(String date);
 }

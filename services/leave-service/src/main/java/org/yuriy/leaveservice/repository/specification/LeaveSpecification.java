@@ -5,14 +5,16 @@ import org.springframework.data.jpa.domain.Specification;
 import org.yuriy.leaveservice.entity.Leave;
 import org.yuriy.leaveservice.entity.LeaveStatus;
 import org.yuriy.leaveservice.entity.LeaveType;
+import org.yuriy.leaveservice.service.EmployeeClient;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public class LeaveSpecification {
     public static Specification<Leave> hasEmployeeId(Long employeeId) {
         return (root, query, cb) -> employeeId == null
                 ? cb.conjunction()
-                : cb.equal(root.get("employee").get("id"), employeeId);
+                : cb.equal(root.get("employeeId"), employeeId);
     }
 
     public static Specification<Leave> hasStatus(LeaveStatus status) {
@@ -48,5 +50,32 @@ public class LeaveSpecification {
             return cb.conjunction();
         };
     }
+    public static Specification<Leave> hasManagerId(Long managerId, List<Long> employeeIds) {
+        return (root, query, cb) -> {
+            if (managerId == null || employeeIds == null || employeeIds.isEmpty()) {
+                return cb.conjunction();
+            }
+            return root.get("employeeId").in(employeeIds);
+        };
+    }
 
+    public static Specification<Leave> employeeIn(List<Long> employeeIds) {
+        return (root, query, cb) -> {
+            if (employeeIds == null || employeeIds.isEmpty()) {
+                return cb.disjunction();
+            }
+            return root.get("employeeId").in(employeeIds);
+        };
+    }
+
+
+    public static Specification<Leave> startAfterOrEqual(LocalDate date) {
+        return (root, query, cb) ->
+                cb.greaterThanOrEqualTo(root.get("startDate"), date);
+    }
+
+    public static Specification<Leave> endBeforeOrEqual(LocalDate date) {
+        return (root, query, cb) ->
+                cb.lessThanOrEqualTo(root.get("endDate"), date);
+    }
 }

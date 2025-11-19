@@ -1,4 +1,7 @@
 package org.yuriy.payrollservice.dto.response;
 
-public record EmployeeBasicResponse(Long id, String firstName, String lastName, String email, String position) {
+import java.time.LocalDate;
+
+public record EmployeeBasicResponse(Long id, String firstName, String lastName, String email, String position,         LocalDate birthDate
+        ) {
 }

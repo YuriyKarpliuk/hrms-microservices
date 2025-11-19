@@ -7,12 +7,16 @@ import org.yuriy.payrollservice.dto.response.PayrollResponse;
 import org.yuriy.payrollservice.dto.response.PayrollWithEmployeeResponse;
 import org.yuriy.payrollservice.entity.Payroll;
 import org.yuriy.payrollservice.entity.PayrollStatus;
+import org.yuriy.payrollservice.service.EmployeeClient;
 
 import java.math.BigDecimal;
 
 
 @Component
 public class PayrollMapper {
+    private final EmployeeClient employeeClient;
+
+    public PayrollMapper(EmployeeClient employeeClient) {this.employeeClient = employeeClient;}
 
     public Payroll toEntity(PayrollCreateRequest r) {
         BigDecimal bonus = r.bonus() != null ? r.bonus() : BigDecimal.ZERO;
@@ -25,8 +29,11 @@ public class PayrollMapper {
     }
 
     public PayrollResponse toResponse(Payroll p) {
+        var employee = employeeClient.getBasicInfo(p.getEmployeeId());
+
         return new PayrollResponse(p.getId(), p.getEmployeeId(), p.getPeriodStart(), p.getPeriodEnd(),
-                p.getBaseSalary(), p.getBonus(), p.getDeductions(), p.getNetSalary(), p.getStatus());
+                p.getBaseSalary(), p.getBonus(), p.getDeductions(), p.getNetSalary(), p.getStatus(),  employee.firstName(),
+                employee.lastName());
     }
 
     public PayrollWithEmployeeResponse toWithEmployeeResponse(Payroll payroll, EmployeeBasicResponse emp) {
